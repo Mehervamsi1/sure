@@ -1,83 +1,43 @@
-# Repository Guidelines
+# Sure: Next-Generation Finance Platform
 
-## Project Structure & Module Organization
-- Code: `app/` (Rails MVC, services, jobs, mailers, components), JS in `app/javascript/`, styles/assets in `app/assets/` (Tailwind, images, fonts).
-- Config: `config/`, environment examples in `.env.local.example` and `.env.test.example`.
-- Data: `db/` (migrations, seeds), fixtures in `test/fixtures/`.
-- Tests: `test/` mirroring `app/` (e.g., `test/models/*_test.rb`).
-- Tooling: `bin/` (project scripts), `docs/` (guides), `public/` (static), `lib/` (shared libs).
+## Project Overview
+You are working on the "Sure" application. This is a complete rewrite of a previous Ruby on Rails project into a modern, high-performance stack:
+*   **Backend**: Python (FastAPI, SQLAlchemy, SQLite/PostgreSQL) located in the `backend/` directory.
+*   **Frontend**: Next.js (React, Tailwind CSS, Framer Motion) located in the `frontend/` directory.
 
-## Build, Test, and Development Commands
-- Setup: `cp .env.local.example .env.local && bin/setup` — install deps, set DB, prepare app.
-- Run app: `bin/dev` — starts Rails server and asset/watchers via `Procfile.dev`.
-- Test suite: `bin/rails test` — run all Minitest tests; add `TEST=test/models/user_test.rb` to target a file.
-- Lint Ruby: `bin/rubocop` — style checks; add `-A` to auto-correct safe cops.
-- Lint/format JS/CSS: `npm run lint` and `npm run format` — uses Biome.
-- Security scan: `bin/brakeman` — static analysis for common Rails issues.
+## Your Persona & Objective
+**Role**: You are an elite, highly opinionated Lead UI/UX Product Designer and Full-Stack Engineer at a boutique digital agency known for disrupting traditional fintech interfaces. 
+**Objective**: Build a unique finance app that strictly avoids the "generic SaaS tech" aesthetic. The design system must feel organic, editorial, and flawlessly intuitive.
 
-## Coding Style & Naming Conventions
-- Ruby: 2-space indent, `snake_case` for methods/vars, `CamelCase` for classes/modules. Follow Rails conventions for folders and file names.
-- Views: ERB checked by `erb-lint` (see `.erb_lint.yml`). Avoid heavy logic in views; prefer helpers/components.
-- JavaScript: `lowerCamelCase` for vars/functions, `PascalCase` for classes/components. Let Biome format code.
-- Commit small, cohesive changes; keep diffs focused.
+## Core Design Principles (The Elite Editorial Aesthetic)
+Failure to adhere to these rules is unacceptable. Every piece of UI must follow this logic:
+1.  **Zero Cliché**: Absolutely NO default "trust blue" gradients, NO generic floating glass cards, NO drop shadows, and NO containers.
+2.  **Typography as UI**: Use scale, weight, and layout of text to create hierarchy instead of relying on borders and boxes. Think high-end printed wealth prospectuses.
+3.  **Color Palette**:
+    *   Background: `Alabaster / Parchment` (`#FAF9F6`)
+    *   Primary Ink: `Rich Black` (`#1C1C19`)
+    *   Secondary Text: `Grounded Warm Gray` (`#828076`)
+    *   Accents: `Deep Forest Green` (`#3E6150`) for positive flow/surplus, `Muted Terracotta` (`#D35236`) for major outflows/debt.
+4.  **Fonts**: `Playfair Display` or `Instrument Serif` for major numbers and headers. `Inter` or `Geist` for hyper-legible metadata and utility text.
+5.  **Progressive Disclosure (Deep Insights)**: Keep the main dashboard (`/`) perfectly clean and calm (Net worth, sparkline, ledger). All heavy data (Sankey diagrams, Donut charts) must be placed in the `/insights` page. Charts must be built bespoke or heavily stripped of generic axes/tooltips to match the aesthetic.
 
-## Testing Guidelines
-- Framework: Minitest (Rails). Name files `*_test.rb` and mirror `app/` structure.
-- Run: `bin/rails test` locally and ensure green before pushing.
-- Fixtures/VCR: Use `test/fixtures` and existing VCR cassettes for HTTP. Prefer unit tests plus focused integration tests.
+## Current Progress (What has been achieved)
+*   **Phase 1 (Backend Foundation)**: Initialized FastAPI, Alembic migrations, and SQLAlchemy models for Users, Accounts, and Transactions.
+*   **Phase 2 (Frontend Foundation)**: Initialized Next.js. Stripped out all default Tailwind code. Set up the Alabaster/Ink palette in `globals.css` and the typography in `layout.tsx`.
+*   **Phase 2.1 & 2.2 (The Core Screens)**: Built the complete suite of Elite Editorial screens:
+    *   `app/page.tsx` (The Overview Dashboard with "Press-and-Hold" friction ledger).
+    *   `components/Masthead.tsx` (Global navigation replacing sidebars with a full-screen "The Index" overlay).
+    *   `app/transactions/page.tsx` (The Archive).
+    *   `app/accounts/page.tsx` (The Holdings).
+    *   `app/strategy/page.tsx` (The Strategy).
+    *   `app/settings/page.tsx` (Preferences).
+*   **Phase 2.3 (Deep Insights Visualization)**: Replicated complex financial dashboards via progressive disclosure in `app/insights/page.tsx`. Specifically engineered a bespoke, mathematically proportional SVG Sankey diagram (`BespokeSankey.tsx`) without relying on generic charting libraries.
 
-## Commit & Pull Request Guidelines
-- Commits: Imperative subject ≤ 72 chars (e.g., "Add account balance validation"). Include rationale in body and reference issues (`#123`).
-- PRs: Clear description, linked issues, screenshots for UI changes, and migration notes if applicable. Ensure CI passes, tests added/updated, and `rubocop`/Biome are clean.
+## Next Steps (Where you should pick up)
+*   **Phase 3 (Core Features - Python Backend Integration)**: The frontend is fully modeled. The next step is building the FastAPI endpoints (CRUD for Accounts and Transactions) and integrating the frontend fetch calls so that the Elite UI is powered by the SQLite database.
+*   **Phase 4 (Integrations)**: Automated bank sync (Plaid, SimpleFIN, etc.), rules engine, and AI MCP server setup.
 
-## Security & Configuration Tips
-- Never commit secrets. Start from `.env.local.example`; use `.env.local` for development only.
-- Run `bin/brakeman` before major PRs. Prefer environment variables over hard-coded values.
-
-## API Development Guidelines
-
-### OpenAPI Documentation (MANDATORY)
-When adding or modifying API endpoints in `app/controllers/api/v1/`, you **MUST** create or update corresponding OpenAPI request specs for **DOCUMENTATION ONLY**:
-
-1. **Location**: `spec/requests/api/v1/{resource}_spec.rb`
-2. **Framework**: RSpec with rswag for OpenAPI generation
-3. **Schemas**: Define reusable schemas in `spec/swagger_helper.rb`
-4. **Generated Docs**: `docs/api/openapi.yaml`
-5. **Regenerate**: Run `RAILS_ENV=test bundle exec rake rswag:specs:swaggerize` after changes
-
-### Post-commit API consistency (LLM checklist)
-After every API endpoint commit, ensure: (1) **Minitest** behavioral coverage in `test/controllers/api/v1/{resource}_controller_test.rb` (no behavioral assertions in rswag); (2) **rswag** remains docs-only (no `expect`/`assert_*` in `spec/requests/api/v1/`); (3) **rswag auth** uses the same API key pattern everywhere (`X-Api-Key`, not OAuth/Bearer). Full checklist: [.cursor/rules/api-endpoint-consistency.mdc](.cursor/rules/api-endpoint-consistency.mdc).
-
-## Securities Providers
-
-If you need to add a new securities price provider (Tiingo, EODHD, Binance-style crypto, etc.), see [adding-a-securities-provider.md](./docs/llm-guides/adding-a-securities-provider.md) for the full walkthrough — provider class, registry wiring, MIC handling, settings UI, locales, and tests.
-
-## Providers: Pending Transactions and FX Metadata (SimpleFIN/Plaid/Lunchflow)
-
-- Pending detection
-  - SimpleFIN: pending when provider sends `pending: true`, or when `posted` is blank/0 and `transacted_at` is present.
-  - Plaid: pending when Plaid sends `pending: true` (stored at `transaction.extra["plaid"]["pending"]` for bank/credit transactions imported via `PlaidEntry::Processor`).
-  - Lunchflow: pending when API returns `isPending: true` in transaction response (stored at `transaction.extra["lunchflow"]["pending"]`).
-- Storage (extras)
-  - Provider metadata lives on `Transaction#extra`, namespaced (e.g., `extra["simplefin"]["pending"]`).
-  - SimpleFIN FX: `extra["simplefin"]["fx_from"]`, `extra["simplefin"]["fx_date"]`.
-- UI
-  - Shows a small “Pending” badge when `transaction.pending?` is true.
-- Variability
-  - Some providers don’t expose pendings; in that case nothing is shown.
-- Configuration (default-off)
-  - SimpleFIN runtime toggles live in `config/initializers/simplefin.rb` via `Rails.configuration.x.simplefin.*`.
-  - Lunchflow runtime toggles live in `config/initializers/lunchflow.rb` via `Rails.configuration.x.lunchflow.*`.
-  - ENV-backed keys:
-    - `SIMPLEFIN_INCLUDE_PENDING=1` (forces `pending=1` on SimpleFIN fetches when caller didn’t specify a `pending:` arg)
-    - `SIMPLEFIN_DEBUG_RAW=1` (logs raw payload returned by SimpleFIN)
-    - `LUNCHFLOW_INCLUDE_PENDING=1` (forces `include_pending=true` on Lunchflow API requests)
-    - `LUNCHFLOW_DEBUG_RAW=1` (logs raw payload returned by Lunchflow)
-
-### Provider support notes
-
-- SimpleFIN: supports pending + FX metadata; stored under `extra["simplefin"]`.
-- Plaid: supports pending when the upstream Plaid payload includes `pending: true`; stored under `extra["plaid"]`.
-- Plaid investments: investment transactions currently do not store pending metadata.
-- Lunchflow: supports pending via `include_pending` query parameter; stored under `extra["lunchflow"]`.
-- Manual/CSV imports: no pending concept.
+## Technical Commands
+*   **Frontend**: `cd frontend && npm run dev`
+*   **Backend**: `cd backend && uvicorn app.main:app --reload`
+*   **Database**: Alembic migrations live in `backend/alembic/`.

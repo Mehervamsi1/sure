@@ -19,6 +19,7 @@ export default function Masthead() {
     { name: "The Archive", path: "/transactions" },
     { name: "The Holdings", path: "/accounts" },
     { name: "The Strategy", path: "/strategy" },
+    { name: "Deep Insights", path: "/insights" },
     { name: "Preferences", path: "/settings" },
   ];
 

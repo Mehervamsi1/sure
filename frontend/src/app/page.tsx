@@ -1,36 +1,63 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Masthead from "@/components/Masthead";
+import { api, Account, NetWorthResponse, CashflowResponse } from "@/lib/api";
 
 // Helper for formatting
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(Math.abs(value));
 };
-
-const accounts = [
-  { id: 1, name: "Chase Sapphire Reserve", balance: -3240.50, type: "liability", lastTransaction: "Sweetgreen - $14.20" },
-  { id: 2, name: "Vanguard Total Stock ETF", balance: 84200.00, type: "asset", lastTransaction: "Dividend Reinvestment - $112.40" },
-  { id: 3, name: "Mercury Operating Account", balance: 43540.50, type: "asset", lastTransaction: "Stripe Payout - $4,200.00" },
-];
-
-import Masthead from "@/components/Masthead";
 
 export default function Home() {
   const [activeAccount, setActiveAccount] = useState<number | null>(null);
+  
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [netWorth, setNetWorth] = useState<NetWorthResponse | null>(null);
+  const [cashflow, setCashflow] = useState<CashflowResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [accs, nw, cf] = await Promise.all([
+          api.getAccounts(),
+          api.getNetWorth(),
+          api.getCashflow()
+        ]);
+        setAccounts(accs);
+        setNetWorth(nw);
+        setCashflow(cf);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-12 min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground animate-pulse tracking-widest uppercase text-xs">Loading the Index...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 pb-32 min-h-screen flex flex-col">
       <Masthead />
 
       {/* 2. The Statement */}
-      <section className="mb-24 text-center">
+      <section className="mb-24 text-center mt-8">
         <motion.h2 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="font-serif text-6xl md:text-8xl tracking-tighter mb-6"
         >
-          $124,500.00
+          {netWorth ? formatCurrency(netWorth.net_worth) : "$0.00"}
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0 }}
@@ -38,7 +65,7 @@ export default function Home() {
           transition={{ delay: 0.2 }}
           className="text-lg text-foreground/80 max-w-md mx-auto leading-relaxed"
         >
-          Your wealth has grown by <span className="text-positive font-medium">$4,500</span> this month.
+          Your wealth has grown by <span className="text-positive font-medium">{cashflow ? formatCurrency(cashflow.net_cashflow) : "$0.00"}</span> this month.
         </motion.p>
       </section>
 
@@ -75,7 +102,7 @@ export default function Home() {
 }
 
 // The 'Friction' Choice: Press and hold to expand
-function LedgerRow({ account, isActive, onToggle }: { account: any, isActive: boolean, onToggle: () => void }) {
+function LedgerRow({ account, isActive, onToggle }: { account: Account, isActive: boolean, onToggle: () => void }) {
   const [isPressing, setIsPressing] = useState(false);
   const holdTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -94,6 +121,9 @@ function LedgerRow({ account, isActive, onToggle }: { account: any, isActive: bo
     }
   };
 
+  // Determine if it's a debt/liability
+  const isLiability = ['credit_card', 'loan', 'other_liability'].includes(account.type);
+
   return (
     <div className="border-b border-border relative overflow-hidden group">
       {/* Progress fill animation for the friction */}
@@ -111,7 +141,7 @@ function LedgerRow({ account, isActive, onToggle }: { account: any, isActive: bo
         onContextMenu={(e) => e.preventDefault()}
       >
         <span className="font-medium text-lg">{account.name}</span>
-        <span className={`font-serif text-xl ${account.type === 'liability' ? 'text-negative' : 'text-foreground'}`}>
+        <span className={`font-serif text-xl ${isLiability ? 'text-negative' : 'text-foreground'}`}>
           {formatCurrency(account.balance)}
         </span>
       </div>
@@ -125,7 +155,7 @@ function LedgerRow({ account, isActive, onToggle }: { account: any, isActive: bo
             className="relative z-10 bg-muted/50 px-2 overflow-hidden"
           >
             <div className="py-4 text-sm text-foreground flex justify-between items-center border-t border-border/50 mt-1">
-              <span>Latest: <span className="text-muted-foreground">{account.lastTransaction}</span></span>
+              <span>Institution: <span className="text-muted-foreground">{account.institution_name || "N/A"}</span></span>
               <button className="underline hover:text-muted-foreground transition-colors">View Ledger</button>
             </div>
           </motion.div>
