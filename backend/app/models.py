@@ -28,6 +28,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     first_name = Column(String)
     last_name = Column(String)
+    bio = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -81,9 +82,30 @@ class Transaction(Base):
     notes = Column(String, nullable=True)
     receipt_url = Column(String, nullable=True)
 
+    # Income-specific fields (only populated when type == "income")
+    income_source = Column(String, nullable=True)      # gic, parents_money, part_time, banking, investment_returns, money_return, full_time
+    source_detail = Column(String, nullable=True)       # Sub-source: Uber, Interest, Return, etc.
+    bank_name = Column(String, nullable=True)           # Banking flow only
+    investment_name = Column(String, nullable=True)     # Investment flow only
+    receipt_type = Column(String, nullable=True)        # cash, interact, bank_transfer_cibc, bank_transfer_rbc, cheque, other
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     account = relationship("Account", foreign_keys=[account_id], back_populates="transactions")
     destination_account = relationship("Account", foreign_keys=[destination_account_id])
     category = relationship("Category")
+
+
+class IncomeOption(Base):
+    """User-managed dropdown options for the income form.
+    
+    category examples: 'part_time_name', 'full_time_name', 'banking_source', 'investment_type', 'receipt_type'
+    """
+    __tablename__ = "income_options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, nullable=False, index=True)  # Which dropdown this option belongs to
+    label = Column(String, nullable=False)                   # Display label
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

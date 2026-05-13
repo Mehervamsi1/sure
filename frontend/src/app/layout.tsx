@@ -15,7 +15,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Sure.",
+  title: "findance.",
   description: "Your financial prospectus.",
 };
 

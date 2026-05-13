@@ -33,7 +33,7 @@ export default function Masthead() {
           onClick={() => setIsOpen(!isOpen)}
           className="font-serif text-2xl font-bold tracking-tight absolute left-1/2 -translate-x-1/2 hover:opacity-70 transition-opacity focus:outline-none"
         >
-          {isOpen ? "Close." : "Sure."}
+          {isOpen ? "Close." : "findance."}
         </button>
         <Link href="/settings" className="w-8 h-8 rounded-full border border-foreground flex items-center justify-center font-serif text-sm hover:bg-foreground hover:text-background transition-colors">
           ME

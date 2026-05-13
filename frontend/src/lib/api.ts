@@ -28,6 +28,12 @@ export interface Transaction {
   billing_cycle: string | null;
   notes: string | null;
   receipt_url: string | null;
+  // Income-specific fields
+  income_source: string | null;
+  source_detail: string | null;
+  bank_name: string | null;
+  investment_name: string | null;
+  receipt_type: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -37,6 +43,13 @@ export interface Category {
   name: string;
   parent_id: number | null;
   children: Category[];
+}
+
+export interface IncomeOption {
+  id: number;
+  category: string;
+  label: string;
+  created_at: string;
 }
 
 export interface NetWorthResponse {
@@ -59,6 +72,20 @@ export interface CategorySpending {
 export interface CategorySpendingResponse {
   breakdown: CategorySpending[];
 }
+
+// Currency constants
+export const CURRENCIES = [
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "CAD", symbol: "C$", name: "Canadian Dollar" },
+  { code: "INR", symbol: "₹", name: "Indian Rupee" },
+  { code: "EUR", symbol: "€", name: "Euro" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+  { code: "CNY", symbol: "¥", name: "Chinese Yuan" },
+  { code: "JPY", symbol: "¥", name: "Japanese Yen" },
+  { code: "AED", symbol: "د.إ", name: "UAE Dirham" },
+] as const;
+
+export type CurrencyCode = (typeof CURRENCIES)[number]["code"];
 
 export const api = {
   // ── Accounts ──
@@ -113,6 +140,33 @@ export const api = {
     });
     if (!res.ok) throw new Error("Failed to create category");
     return res.json();
+  },
+
+  // ── Income Options ──
+  async getIncomeOptions(category?: string): Promise<IncomeOption[]> {
+    const url = category
+      ? `${API_BASE_URL}/income-options/?category=${category}`
+      : `${API_BASE_URL}/income-options/`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch income options");
+    return res.json();
+  },
+
+  async createIncomeOption(data: { category: string; label: string }): Promise<IncomeOption> {
+    const res = await fetch(`${API_BASE_URL}/income-options/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to create income option");
+    return res.json();
+  },
+
+  async deleteIncomeOption(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/income-options/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Failed to delete income option");
   },
 
   // ── Analytics ──

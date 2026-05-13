@@ -16,6 +16,12 @@ class TransactionBase(BaseModel):
     billing_cycle: Optional[str] = None
     notes: Optional[str] = None
     receipt_url: Optional[str] = None
+    # Income-specific fields
+    income_source: Optional[str] = None
+    source_detail: Optional[str] = None
+    bank_name: Optional[str] = None
+    investment_name: Optional[str] = None
+    receipt_type: Optional[str] = None
 
 class TransactionCreate(TransactionBase):
     account_id: int
@@ -34,6 +40,12 @@ class TransactionUpdate(BaseModel):
     billing_cycle: Optional[str] = None
     notes: Optional[str] = None
     receipt_url: Optional[str] = None
+    # Income-specific fields
+    income_source: Optional[str] = None
+    source_detail: Optional[str] = None
+    bank_name: Optional[str] = None
+    investment_name: Optional[str] = None
+    receipt_type: Optional[str] = None
 
 class TransactionRead(TransactionBase):
     id: int

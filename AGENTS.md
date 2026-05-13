@@ -1,7 +1,7 @@
-# Sure: Next-Generation Finance Platform
+# findance: Next-Generation Finance Platform
 
 ## Project Overview
-You are working on the "Sure" application. This is a complete rewrite of a previous Ruby on Rails project into a modern, high-performance stack:
+You are working on the "findance" application. This is a complete rewrite of a previous Ruby on Rails project into a modern, high-performance stack:
 *   **Backend**: Python (FastAPI, SQLAlchemy, SQLite/PostgreSQL) located in the `backend/` directory.
 *   **Frontend**: Next.js (React, Tailwind CSS, Framer Motion) located in the `frontend/` directory.
 
@@ -22,7 +22,7 @@ Failure to adhere to these rules is unacceptable. Every piece of UI must follow 
 5.  **Progressive Disclosure (Deep Insights)**: Keep the main dashboard (`/`) perfectly clean and calm (Net worth, sparkline, ledger). All heavy data (Sankey diagrams, Donut charts) must be placed in the `/insights` page. Charts must be built bespoke or heavily stripped of generic axes/tooltips to match the aesthetic.
 
 ## Current Progress (What has been achieved)
-*   **Phase 1 (Backend Foundation)**: Initialized FastAPI, Alembic migrations, and SQLAlchemy models for Users, Accounts, and Transactions.
+*   **Phase 1 (Backend Foundation)**: Initialized FastAPI, Alembic migrations, and SQLAlchemy models for Users, Accounts, Transactions, and Categories.
 *   **Phase 2 (Frontend Foundation)**: Initialized Next.js. Stripped out all default Tailwind code. Set up the Alabaster/Ink palette in `globals.css` and the typography in `layout.tsx`.
 *   **Phase 2.1 & 2.2 (The Core Screens)**: Built the complete suite of Elite Editorial screens:
     *   `app/page.tsx` (The Overview Dashboard with "Press-and-Hold" friction ledger).
@@ -32,12 +32,14 @@ Failure to adhere to these rules is unacceptable. Every piece of UI must follow 
     *   `app/strategy/page.tsx` (The Strategy).
     *   `app/settings/page.tsx` (Preferences).
 *   **Phase 2.3 (Deep Insights Visualization)**: Replicated complex financial dashboards via progressive disclosure in `app/insights/page.tsx`. Specifically engineered a bespoke, mathematically proportional SVG Sankey diagram (`BespokeSankey.tsx`) without relying on generic charting libraries.
+*   **Phase 3 (Backend Integration)**: Connected frontend to FastAPI backend with full CRUD for Accounts, Transactions, Categories, and Analytics endpoints. Seed data populates default user, categories, and sample accounts.
+*   **Phase 3.1 (Income Tracker)**: Built a branching conditional income form with progressive disclosure — distinct from the expense form. Supports user-managed dropdown options, 8-currency selector, and receipt type tracking.
 
 ## Next Steps (Where you should pick up)
-*   **Phase 3 (Core Features - Python Backend Integration)**: The frontend is fully modeled. The next step is building the FastAPI endpoints (CRUD for Accounts and Transactions) and integrating the frontend fetch calls so that the Elite UI is powered by the SQLite database.
 *   **Phase 4 (Integrations)**: Automated bank sync (Plaid, SimpleFIN, etc.), rules engine, and AI MCP server setup.
 
 ## Technical Commands
 *   **Frontend**: `cd frontend && npm run dev`
 *   **Backend**: `cd backend && uvicorn app.main:app --reload`
 *   **Database**: Alembic migrations live in `backend/alembic/`.
+*   **Seed Data**: `cd backend && python -m app.db.seed`
