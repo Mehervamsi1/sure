@@ -4,15 +4,28 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { api } from "@/lib/api";
 
 export default function Masthead() {
   const [isOpen, setIsOpen] = useState(false);
+  const [initial, setInitial] = useState("ME");
   const pathname = usePathname();
 
   // Close the index when navigation occurs
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
+
+  // Fetch the user's initial for the profile bubble
+  useEffect(() => {
+    api.getUserProfile().then(data => {
+      if (data && data.first_name) {
+        setInitial(data.first_name.charAt(0).toUpperCase());
+      } else if (data && data.email) {
+        setInitial(data.email.charAt(0).toUpperCase());
+      }
+    }).catch(err => console.error("Failed to fetch initial", err));
+  }, []);
 
   const navItems = [
     { name: "Overview", path: "/" },
@@ -36,7 +49,7 @@ export default function Masthead() {
           {isOpen ? "Close." : "findance."}
         </button>
         <Link href="/settings" className="w-8 h-8 rounded-full border border-foreground flex items-center justify-center font-serif text-sm hover:bg-foreground hover:text-background transition-colors">
-          ME
+          {initial}
         </Link>
       </header>
 

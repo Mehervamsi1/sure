@@ -1,4 +1,21 @@
-const API_BASE_URL = "http://localhost:8000/api/v1";
+import { supabase } from "./supabase";
+
+const API_BASE_URL = "/api/v1";
+
+async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = new Headers(options.headers || {});
+  
+  if (session?.access_token) {
+    headers.set("Authorization", `Bearer ${session.access_token}`);
+  }
+
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) {
+    throw new Error(`API Request failed: ${response.statusText}`);
+  }
+  return response.json();
+}
 
 export interface Account {
   id: number;
@@ -90,101 +107,96 @@ export type CurrencyCode = (typeof CURRENCIES)[number]["code"];
 export const api = {
   // ── Accounts ──
   async getAccounts(): Promise<Account[]> {
-    const res = await fetch(`${API_BASE_URL}/accounts/`);
-    if (!res.ok) throw new Error("Failed to fetch accounts");
-    return res.json();
+    return fetchWithAuth(`${API_BASE_URL}/accounts`);
   },
 
   async createAccount(data: Partial<Account> & { user_id: number }): Promise<Account> {
-    const res = await fetch(`${API_BASE_URL}/accounts/`, {
+    return fetchWithAuth(`${API_BASE_URL}/accounts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error("Failed to create account");
-    return res.json();
+  },
+
+  async updateAccount(id: number, data: Partial<Account>): Promise<Account> {
+    return fetchWithAuth(`${API_BASE_URL}/accounts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
   },
 
   // ── Transactions ──
   async getTransactions(accountId?: number): Promise<Transaction[]> {
     const url = accountId 
-      ? `${API_BASE_URL}/transactions/?account_id=${accountId}`
-      : `${API_BASE_URL}/transactions/`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch transactions");
-    return res.json();
+      ? `${API_BASE_URL}/transactions?account_id=${accountId}`
+      : `${API_BASE_URL}/transactions`;
+    return fetchWithAuth(url);
   },
 
   async createTransaction(data: Partial<Transaction> & { account_id: number }): Promise<Transaction> {
-    const res = await fetch(`${API_BASE_URL}/transactions/`, {
+    return fetchWithAuth(`${API_BASE_URL}/transactions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error("Failed to create transaction");
-    return res.json();
   },
 
   // ── Categories ──
   async getCategories(): Promise<Category[]> {
-    const res = await fetch(`${API_BASE_URL}/categories/`);
-    if (!res.ok) throw new Error("Failed to fetch categories");
-    return res.json();
+    return fetchWithAuth(`${API_BASE_URL}/categories`);
   },
 
   async createCategory(data: { name: string; parent_id?: number | null }): Promise<Category> {
-    const res = await fetch(`${API_BASE_URL}/categories/`, {
+    return fetchWithAuth(`${API_BASE_URL}/categories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error("Failed to create category");
-    return res.json();
   },
 
   // ── Income Options ──
   async getIncomeOptions(category?: string): Promise<IncomeOption[]> {
     const url = category
-      ? `${API_BASE_URL}/income-options/?category=${category}`
-      : `${API_BASE_URL}/income-options/`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch income options");
-    return res.json();
+      ? `${API_BASE_URL}/income-options?category=${category}`
+      : `${API_BASE_URL}/income-options`;
+    return fetchWithAuth(url);
   },
 
   async createIncomeOption(data: { category: string; label: string }): Promise<IncomeOption> {
-    const res = await fetch(`${API_BASE_URL}/income-options/`, {
+    return fetchWithAuth(`${API_BASE_URL}/income-options`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error("Failed to create income option");
-    return res.json();
   },
 
   async deleteIncomeOption(id: number): Promise<void> {
-    const res = await fetch(`${API_BASE_URL}/income-options/${id}`, {
+    await fetchWithAuth(`${API_BASE_URL}/income-options/${id}`, {
       method: "DELETE",
     });
-    if (!res.ok) throw new Error("Failed to delete income option");
   },
 
   // ── Analytics ──
   async getNetWorth(): Promise<NetWorthResponse> {
-    const res = await fetch(`${API_BASE_URL}/analytics/net-worth`);
-    if (!res.ok) throw new Error("Failed to fetch net worth");
-    return res.json();
+    return fetchWithAuth(`${API_BASE_URL}/analytics/net-worth`);
   },
 
   async getCashflow(): Promise<CashflowResponse> {
-    const res = await fetch(`${API_BASE_URL}/analytics/cashflow`);
-    if (!res.ok) throw new Error("Failed to fetch cashflow");
-    return res.json();
+    return fetchWithAuth(`${API_BASE_URL}/analytics/cashflow`);
   },
 
   async getSpending(): Promise<CategorySpendingResponse> {
-    const res = await fetch(`${API_BASE_URL}/analytics/spending`);
-    if (!res.ok) throw new Error("Failed to fetch spending");
-    return res.json();
+    return fetchWithAuth(`${API_BASE_URL}/analytics/spending`);
+  },
+
+  // ── Profile ──
+  async getUserProfile(): Promise<{ id: number, email: string, first_name: string | null, last_name: string | null, gender: string | null } | null> {
+    try {
+      return await fetchWithAuth(`${API_BASE_URL}/users/me`);
+    } catch (err) {
+      console.error("Failed to load user profile:", err);
+      return null;
+    }
   }
 };

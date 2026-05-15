@@ -6,6 +6,8 @@ class UserBase(BaseModel):
     email: EmailStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    gender: Optional[str] = None
+    bio: Optional[str] = None
     is_active: bool = True
 
 class UserCreate(UserBase):
@@ -15,6 +17,8 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    gender: Optional[str] = None
+    bio: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
 
