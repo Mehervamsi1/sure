@@ -85,10 +85,13 @@ class CRUDAnalytics:
         # Build a map of account_id -> currency for transaction conversion
         acct_currency = {a.id: a.currency for a in accounts}
 
-        current_net_worth = sum(
-            to_display(a.balance, a.currency) for a in accounts
-            if a.type in asset_types or a.type in liability_types
+        total_assets = sum(
+            to_display(a.balance, a.currency) for a in accounts if a.type in asset_types
         )
+        total_liabilities = sum(
+            abs(to_display(a.balance, a.currency)) for a in accounts if a.type in liability_types
+        )
+        current_net_worth = total_assets - total_liabilities
 
         today = datetime.now().date()
         start_date = today - timedelta(days=days)
