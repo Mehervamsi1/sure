@@ -6,7 +6,7 @@ from app.api import deps
 
 router = APIRouter()
 
-@router.post("/", response_model=schemas.UserRead)
+@router.post("", response_model=schemas.UserRead)
 def create_user(
     *,
     db: Session = Depends(deps.get_db),

@@ -12,7 +12,12 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
-    throw new Error(`API Request failed: ${response.statusText}`);
+    let detail = response.statusText;
+    try {
+      const body = await response.json();
+      detail = body.detail || JSON.stringify(body);
+    } catch {}
+    throw new Error(`API ${response.status}: ${detail}`);
   }
   return response.json();
 }
@@ -90,6 +95,38 @@ export interface CategorySpendingResponse {
   breakdown: CategorySpending[];
 }
 
+export interface NetWorthDataPoint {
+  date: string;
+  net_worth: number;
+}
+
+export interface NetWorthHistoryResponse {
+  history: NetWorthDataPoint[];
+}
+
+export interface ConvertedAccountBalance {
+  account_id: number;
+  name: string;
+  type: string;
+  original_balance: number;
+  original_currency: string;
+  converted_balance: number;
+  display_currency: string;
+}
+
+export interface ConvertedNetWorthResponse {
+  display_currency: string;
+  total_assets: number;
+  total_liabilities: number;
+  net_worth: number;
+  accounts: ConvertedAccountBalance[];
+}
+
+export interface ExchangeRatesResponse {
+  base: string;
+  rates: Record<string, number>;
+}
+
 // Currency constants
 export const CURRENCIES = [
   { code: "USD", symbol: "$", name: "US Dollar" },
@@ -142,6 +179,20 @@ export const api = {
     });
   },
 
+  async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction> {
+    return fetchWithAuth(`${API_BASE_URL}/transactions/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteTransaction(id: number): Promise<void> {
+    await fetchWithAuth(`${API_BASE_URL}/transactions/${id}`, {
+      method: "DELETE",
+    });
+  },
+
   // ── Categories ──
   async getCategories(): Promise<Category[]> {
     return fetchWithAuth(`${API_BASE_URL}/categories`);
@@ -180,6 +231,22 @@ export const api = {
   // ── Analytics ──
   async getNetWorth(): Promise<NetWorthResponse> {
     return fetchWithAuth(`${API_BASE_URL}/analytics/net-worth`);
+  },
+
+  async getNetWorthHistory(days: number = 30, displayCurrency: string = "USD"): Promise<NetWorthHistoryResponse> {
+    return fetchWithAuth(`${API_BASE_URL}/analytics/net-worth-history?days=${days}&display_currency=${displayCurrency}`);
+  },
+
+  async getNetWorthConverted(displayCurrency: string = "USD"): Promise<ConvertedNetWorthResponse> {
+    return fetchWithAuth(`${API_BASE_URL}/analytics/net-worth-converted?display_currency=${displayCurrency}`);
+  },
+
+  async getExchangeRates(base: string = "USD"): Promise<ExchangeRatesResponse> {
+    return fetchWithAuth(`${API_BASE_URL}/analytics/exchange-rates?base=${base}`);
+  },
+
+  async getRecentTransactions(limit: number = 10): Promise<Transaction[]> {
+    return fetchWithAuth(`${API_BASE_URL}/analytics/recent-transactions?limit=${limit}`);
   },
 
   async getCashflow(): Promise<CashflowResponse> {

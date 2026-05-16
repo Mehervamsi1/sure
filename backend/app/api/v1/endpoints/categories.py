@@ -6,7 +6,7 @@ from app.api import deps
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.CategoryRead])
+@router.get("")
 def read_categories(
     db: Session = Depends(deps.get_db),
 ) -> Any:
@@ -25,7 +25,7 @@ def read_children(
     """
     return crud.category.get_children(db=db, parent_id=category_id)
 
-@router.post("/", response_model=schemas.CategoryRead)
+@router.post("", response_model=schemas.CategoryRead)
 def create_category(
     *,
     db: Session = Depends(deps.get_db),

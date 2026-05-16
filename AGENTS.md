@@ -34,6 +34,7 @@ Failure to adhere to these rules is unacceptable. Every piece of UI must follow 
 *   **Phase 2.3 (Deep Insights Visualization)**: Replicated complex financial dashboards via progressive disclosure in `app/insights/page.tsx`. Specifically engineered a bespoke, mathematically proportional SVG Sankey diagram (`BespokeSankey.tsx`) without relying on generic charting libraries.
 *   **Phase 3 (Backend Integration)**: Connected frontend to FastAPI backend with full CRUD for Accounts, Transactions, Categories, and Analytics endpoints. Seed data populates default user, categories, and sample accounts.
 *   **Phase 3.1 (Income Tracker)**: Built a branching conditional income form with progressive disclosure — distinct from the expense form. Supports user-managed dropdown options, 8-currency selector, and receipt type tracking.
+*   **Phase 3.2 (Settings & Security Center)**: Completely overhauled `/settings` into an accordion-style control center. Implemented Supabase Auth password/email updates. Set up bulletproof Next.js API Rewrites to fix Windows/Node localhost proxy issues. Built full CRUD for "Financial Architecture" Accounts (Initialize + Update flows) with 8 global currencies, "Cash" tracking, last 4 digits formatting, and tactile framer-motion micro-animations.
 
 ## Next Steps (Where you should pick up)
 *   **Phase 4 (Integrations)**: Automated bank sync (Plaid, SimpleFIN, etc.), rules engine, and AI MCP server setup.

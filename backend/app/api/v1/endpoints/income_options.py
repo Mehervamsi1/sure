@@ -6,7 +6,7 @@ from app.api import deps
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.IncomeOptionRead])
+@router.get("", response_model=List[schemas.IncomeOptionRead])
 def read_income_options(
     category: Optional[str] = None,
     db: Session = Depends(deps.get_db),
@@ -18,7 +18,7 @@ def read_income_options(
         return crud.income_option.get_by_category(db=db, category=category)
     return crud.income_option.get_all_grouped(db=db)
 
-@router.post("/", response_model=schemas.IncomeOptionRead)
+@router.post("", response_model=schemas.IncomeOptionRead)
 def create_income_option(
     *,
     db: Session = Depends(deps.get_db),

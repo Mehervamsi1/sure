@@ -40,18 +40,18 @@ def seed():
         existing_cats = db.query(Category).count()
         if existing_cats == 0:
             category_tree = {
-                "Housing": ["Rent/Mortgage", "Property Tax", "Home Insurance", "Maintenance"],
-                "Utilities": ["Electricity", "Water", "Gas", "Internet", "Phone"],
-                "Food & Dining": ["Groceries", "Restaurants", "Coffee", "Delivery"],
-                "Transportation": ["Gas/Fuel", "Public Transit", "Car Insurance", "Parking", "Ride Share"],
-                "Entertainment": ["Streaming", "Movies", "Games", "Concerts"],
-                "Shopping": ["Clothing", "Electronics", "Home Goods", "Personal Care"],
-                "Health": ["Insurance Premium", "Doctor/Dentist", "Pharmacy", "Gym"],
-                "Subscriptions": ["Software", "Memberships", "Magazines"],
-                "Education": ["Tuition", "Books", "Courses"],
-                "Investments": ["Stocks", "Crypto", "Retirement", "Real Estate"],
-                "Income": ["Salary", "Freelance", "Interest", "Dividends", "Other"],
-                "Transfers": [],
+                "Transit": ["Bus Pass / Presto", "Cab / Taxi", "Fuel", "Parking", "Auto & Transport", "Vehicle Maintenance", "Ride Sharing", "Toll Charges", "Travel & Hotels", "Travel Bags", "Flight Tickets", "Train Tickets"],
+                "Cuisine": ["Groceries", "Food & Dining", "Fast Food", "Coffee", "Snacks", "Bakery", "Party", "Fine Dining", "Food Delivery", "Beverages"],
+                "Habitat": ["Rent", "Utilities", "Electricity", "Water Bill", "Internet", "Home Furnishing", "Utensils", "Appliances", "Home Maintenance", "Cleaning Supplies"],
+                "Vogue": ["Clothing", "Fashion", "Footwear", "Cosmetics", "Hair Care", "Skincare", "Accessories", "Jewelry", "Grooming", "Perfumes"],
+                "Digital": ["Electronics / Tech", "Mobile Bill", "Mobile / Laptop Upgrade", "Software", "Gadgets", "Accessories", "Gaming", "Cloud Storage", "Subscriptions", "Streaming Services"],
+                "Finance": ["Credit Card Bill", "Debt Payment", "Investments", "Savings", "Taxes", "Insurance", "Lent Money", "Cash Withdraw", "Bank Charges", "EMI", "Loan Repayment", "Mutual Funds"],
+                "Wellness": ["Hospital Bills", "Medicines", "Doctor Consultation", "Dental Care", "Therapy", "Fitness", "Gym", "Health Checkups", "Supplements"],
+                "Career": ["Work Expenses", "Projects", "Automations", "Education", "Courses", "Certifications", "Office Supplies", "Business Tools", "Workshops", "Books"],
+                "Leisure": ["Movies", "Recreation & Entertainment", "Concerts", "Sports", "Hobbies", "Gaming", "Events", "Outings", "Streaming", "Vacation Activities"],
+                "Retail": ["Shopping", "Personal Spending", "Miscellaneous", "Online Orders", "Impulse Purchases", "Marketplace Purchases", "Stationery", "Household Items"],
+                "Benevolence": ["Gifts", "Donations", "Charity", "Family Support", "Festivals", "Celebrations", "Contributions"],
+                "Charges": ["Fee & Charges", "Service Charges", "Penalties", "Processing Fees", "Convenience Fees", "Transaction Fees", "Late Fees", "Membership Fees"],
             }
             
             for parent_name, children in category_tree.items():
