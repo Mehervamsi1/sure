@@ -30,7 +30,7 @@ export default function Masthead() {
   const navItems = [
     { name: "Overview", path: "/" },
     { name: "The Archive", path: "/transactions" },
-    { name: "The Holdings", path: "/accounts" },
+    { name: "The Holdings", path: "/holdings" },
     { name: "The Strategy", path: "/strategy" },
     { name: "Deep Insights", path: "/insights" },
     { name: "Preferences", path: "/settings" },

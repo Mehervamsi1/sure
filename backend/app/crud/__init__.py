@@ -4,3 +4,4 @@ from .crud_user import user
 from .crud_analytics import analytics
 from .crud_category import category
 from .crud_income_option import income_option
+from .crud_holding import holding

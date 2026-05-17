@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Masthead from "@/components/Masthead";
 import { motion, AnimatePresence } from "framer-motion";
-import { api, Transaction, Account, Category, CURRENCIES } from "@/lib/api";
+import { api, Transaction, Account, Category, CURRENCIES, TickerSearchResult } from "@/lib/api";
 
 const formatCurrency = (value: number, currencyCode: string = "USD") => {
   const curr = CURRENCIES.find(c => c.code === currencyCode);
@@ -35,7 +35,7 @@ const INVESTMENT_SUBCATEGORIES = [
   "Investment Returns", "SIP Withdrawals"
 ];
 
-type FormMode = "expense" | "income" | "transfer";
+type FormMode = "expense" | "income" | "transfer" | "investment";
 
 const inputClass = "border-b border-border bg-transparent py-2 focus:outline-none focus:border-foreground font-serif text-xl w-full";
 const selectClass = "border-b border-border bg-transparent py-2 focus:outline-none focus:border-foreground font-serif text-xl cursor-pointer w-full appearance-none";
@@ -63,6 +63,17 @@ export default function Transactions() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Investment form state
+  const [tickerQuery, setTickerQuery] = useState("");
+  const [tickerResults, setTickerResults] = useState<TickerSearchResult[]>([]);
+  const [selectedTicker, setSelectedTicker] = useState<TickerSearchResult | null>(null);
+  const [investQuantity, setInvestQuantity] = useState("");
+  const [investPrice, setInvestPrice] = useState("");
+  const [investAccountId, setInvestAccountId] = useState("");
+  const [brokerName, setBrokerName] = useState("");
+  const [brokerLast4, setBrokerLast4] = useState("");
+  const [tickerSearching, setTickerSearching] = useState(false);
 
   // Edit / Delete
   const [editingTxn, setEditingTxn] = useState<Transaction | null>(null);
@@ -122,6 +133,59 @@ export default function Transactions() {
     setBillingCycle("monthly");
     setNotes("");
     setFormError(null);
+  };
+
+  const searchTickers = async (query: string) => {
+    if (query.length < 1) { setTickerResults([]); return; }
+    setTickerSearching(true);
+    try {
+      const results = await api.searchTicker(query);
+      setTickerResults(results);
+    } catch { setTickerResults([]); }
+    finally { setTickerSearching(false); }
+  };
+
+  const selectTicker = (result: TickerSearchResult) => {
+    setSelectedTicker(result);
+    setTickerQuery(result.ticker);
+    setTickerResults([]);
+    setCurrency(result.currency);
+    if (result.current_price) setInvestPrice(result.current_price.toString());
+  };
+
+  const handleInvestmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setFormError(null);
+    if (!selectedTicker) { setFormError("Please search and select an asset."); setSubmitting(false); return; }
+    const investAccounts = accounts.filter(a => a.type === "investment");
+    const targetInvestAcctId = investAccountId || (investAccounts.length > 0 ? investAccounts[0].id.toString() : "");
+    if (!targetInvestAcctId) { setFormError("No investment account found. Create one in Settings."); setSubmitting(false); return; }
+    try {
+      await api.buyHolding({
+        ticker: selectedTicker.ticker,
+        asset_name: selectedTicker.name,
+        asset_type: selectedTicker.asset_type,
+        exchange: selectedTicker.exchange || undefined,
+        quantity: parseFloat(investQuantity),
+        price_per_unit: parseFloat(investPrice),
+        currency,
+        date: new Date(date).toISOString(),
+        debit_account_id: parseInt(accountId),
+        investment_account_id: parseInt(targetInvestAcctId),
+        broker_name: brokerName || undefined,
+        broker_account_last4: brokerLast4 || undefined,
+        notes: notes || undefined,
+      });
+      setShowForm(false);
+      resetForm();
+      setSelectedTicker(null); setTickerQuery(""); setInvestQuantity(""); setInvestPrice(""); setBrokerName(""); setBrokerLast4("");
+      loadData();
+    } catch (err: any) {
+      setFormError(err.message || "Failed to record investment.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const openEdit = (t: Transaction) => {
@@ -321,7 +385,7 @@ export default function Transactions() {
               <div className="mb-8">
                 <label className="text-xs tracking-widest uppercase text-muted-foreground block mb-4">Transaction Type</label>
                 <div className="flex gap-2">
-                  {(["expense", "income", "transfer"] as const).map(t => (
+                  {(["expense", "income", "transfer", "investment"] as const).map(t => (
                     <button
                       key={t}
                       type="button"
@@ -391,6 +455,126 @@ export default function Transactions() {
                   Transfer form — coming next.
                 </div>
               )}
+
+              {formMode === "investment" && (
+                <form onSubmit={handleInvestmentSubmit} className="flex flex-col gap-8">
+                  {/* Ticker Search */}
+                  <div className="flex flex-col gap-2 relative">
+                    <label className={labelClass}>Search Asset</label>
+                    <input
+                      type="text"
+                      value={tickerQuery}
+                      onChange={(e) => { setTickerQuery(e.target.value); searchTickers(e.target.value); }}
+                      className={inputClass}
+                      placeholder="Type ticker or company name... (e.g. NVDA, Reliance)"
+                    />
+                    {tickerSearching && <span className="text-xs text-muted-foreground mt-1 animate-pulse">Searching...</span>}
+                    {tickerResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 z-20 bg-background border border-border mt-1 max-h-60 overflow-y-auto">
+                        {tickerResults.map(r => (
+                          <button
+                            key={r.ticker}
+                            type="button"
+                            onClick={() => selectTicker(r)}
+                            className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b border-border/50 last:border-0"
+                          >
+                            <span className="font-serif text-lg">{r.ticker}</span>
+                            <span className="text-sm text-muted-foreground ml-3">{r.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">({r.exchange})</span>
+                            {r.current_price && (
+                              <span className="float-right font-serif text-lg">{r.currency === "USD" ? "$" : r.currency} {r.current_price.toFixed(2)}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {selectedTicker && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Selected: <span className="text-foreground font-medium">{selectedTicker.name}</span> ({selectedTicker.ticker}) on {selectedTicker.exchange}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quantity + Price + Date */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Quantity</label>
+                      <input type="number" required step="any" value={investQuantity} onChange={e => setInvestQuantity(e.target.value)} className={inputClass} placeholder="e.g. 10" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Price per Unit</label>
+                      <input type="number" required step="0.01" value={investPrice} onChange={e => setInvestPrice(e.target.value)} className={inputClass} placeholder="0.00" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Date</label>
+                      <input type="date" required value={date} onChange={e => setDate(e.target.value)} className={inputClass} />
+                    </div>
+                  </div>
+
+                  {/* Total Cost Display */}
+                  {investQuantity && investPrice && (
+                    <div className="text-sm text-muted-foreground">
+                      Total Cost: <span className="text-foreground font-serif text-xl">{formatCurrency(parseFloat(investQuantity) * parseFloat(investPrice), currency)}</span>
+                    </div>
+                  )}
+
+                  {/* Currency + Debit Account + Investment Account */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Currency</label>
+                      <select value={currency} onChange={e => setCurrency(e.target.value)} className={selectClass}>
+                        {CURRENCIES.map(c => (
+                          <option key={c.code} value={c.code} className="bg-background text-foreground">{c.symbol} {c.code}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Debit From</label>
+                      <select value={accountId} onChange={e => setAccountId(e.target.value)} className={selectClass}>
+                        {accounts.filter(a => a.type !== "investment").map(acc => (
+                          <option key={acc.id} value={acc.id} className="bg-background text-foreground">{acc.name} ({acc.currency})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Investment Account</label>
+                      <select value={investAccountId} onChange={e => setInvestAccountId(e.target.value)} className={selectClass}>
+                        {accounts.filter(a => a.type === "investment").map(acc => (
+                          <option key={acc.id} value={acc.id} className="bg-background text-foreground">{acc.name} ({acc.currency})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Broker Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Broker / Platform</label>
+                      <input type="text" value={brokerName} onChange={e => setBrokerName(e.target.value)} className={inputClass} placeholder="e.g. Zerodha, Wealthsimple" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className={labelClass}>Account Last 4</label>
+                      <input type="text" maxLength={4} value={brokerLast4} onChange={e => setBrokerLast4(e.target.value)} className={inputClass} placeholder="e.g. 4829" />
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div className="flex flex-col gap-2">
+                    <label className={labelClass}>Notes</label>
+                    <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="border-b border-border bg-transparent py-2 focus:outline-none focus:border-foreground font-serif text-lg resize-none" placeholder="Optional notes..." />
+                  </div>
+
+                  {formError && (
+                    <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-negative text-sm border-b border-negative/30 pb-2">{formError}</motion.div>
+                  )}
+
+                  <div className="flex justify-end mt-4">
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} type="submit" disabled={submitting} className="bg-foreground text-background py-3 px-8 text-sm tracking-widest uppercase hover:opacity-90 transition-opacity disabled:opacity-50">
+                      {submitting ? "Processing..." : "Record Investment"}
+                    </motion.button>
+                  </div>
+                </form>
+              )}
             </div>
           </motion.div>
         )}
@@ -431,7 +615,7 @@ export default function Transactions() {
                     <div className="col-span-5">
                       <span className="font-serif text-xl block">{t.merchant_name || t.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {t.type === "transfer" ? "Transfer" : t.type === "income" ? "Income" : accounts.find(a => a.id === t.account_id)?.name}
+                        {t.type === "investment" ? "Investment" : t.type === "transfer" ? "Transfer" : t.type === "income" ? "Income" : accounts.find(a => a.id === t.account_id)?.name}
                         {t.is_subscription && " · Recurring"}
                         {t.currency && t.currency !== "USD" && ` · ${t.currency}`}
                       </span>

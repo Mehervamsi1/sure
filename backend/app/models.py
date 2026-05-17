@@ -19,6 +19,14 @@ class TransactionType(str, enum.Enum):
     EXPENSE = "expense"
     INCOME = "income"
     TRANSFER = "transfer"
+    INVESTMENT = "investment"
+
+class HoldingType(str, enum.Enum):
+    STOCK = "stock"
+    ETF = "etf"
+    MUTUAL_FUND = "mutual_fund"
+    CRYPTO = "crypto"
+    COMMODITY = "commodity"
 
 class User(Base):
     __tablename__ = "users"
@@ -89,13 +97,42 @@ class Transaction(Base):
     bank_name = Column(String, nullable=True)           # Banking flow only
     investment_name = Column(String, nullable=True)     # Investment flow only
     receipt_type = Column(String, nullable=True)        # cash, interact, bank_transfer_cibc, bank_transfer_rbc, cheque, other
+    holding_id = Column(Integer, ForeignKey("holdings.id"), nullable=True)
+    holding = relationship("Holding", back_populates="transactions")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     account = relationship("Account", foreign_keys=[account_id], back_populates="transactions")
     destination_account = relationship("Account", foreign_keys=[destination_account_id])
     category = relationship("Category")
+
+
+class Holding(Base):
+    __tablename__ = "holdings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    ticker = Column(String, nullable=False)
+    asset_name = Column(String, nullable=False)
+    asset_type = Column(Enum(HoldingType), nullable=False)
+    exchange = Column(String, nullable=True)
+    quantity = Column(Float, nullable=False)
+    avg_cost_price = Column(Float, nullable=False)
+    total_invested = Column(Float, nullable=False)
+    currency = Column(String, default="USD")
+    purchase_date = Column(DateTime(timezone=True), nullable=True)
+    broker_name = Column(String, nullable=True)
+    broker_account_last4 = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    owner = relationship("User")
+    account = relationship("Account")
+    transactions = relationship("Transaction", back_populates="holding")
 
 
 class IncomeOption(Base):

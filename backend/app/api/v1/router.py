@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import accounts, transactions, analytics, users, categories, income_options, email
+from app.api.v1.endpoints import accounts, transactions, analytics, users, categories, income_options, email, holdings
 
 api_router = APIRouter()
 
@@ -10,3 +10,4 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["analytic
 api_router.include_router(categories.router, prefix="/categories", tags=["categories"])
 api_router.include_router(income_options.router, prefix="/income-options", tags=["income-options"])
 api_router.include_router(email.router, prefix="/email", tags=["email"])
+api_router.include_router(holdings.router, prefix="/holdings", tags=["holdings"])

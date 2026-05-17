@@ -8,3 +8,7 @@ from .analytics import (
 )
 from .category import CategoryBase, CategoryCreate, CategoryUpdate, CategoryRead
 from .income_option import IncomeOptionBase, IncomeOptionCreate, IncomeOptionRead
+from .holding import (
+    HoldingBase, HoldingCreate, HoldingUpdate, HoldingRead,
+    BuyRequest, SellRequest, TickerSearchResult, QuoteResult, HistoryPoint
+)

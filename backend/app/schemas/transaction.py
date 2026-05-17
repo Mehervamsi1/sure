@@ -22,6 +22,7 @@ class TransactionBase(BaseModel):
     bank_name: Optional[str] = None
     investment_name: Optional[str] = None
     receipt_type: Optional[str] = None
+    holding_id: Optional[int] = None
 
 class TransactionCreate(TransactionBase):
     account_id: int
@@ -46,6 +47,7 @@ class TransactionUpdate(BaseModel):
     bank_name: Optional[str] = None
     investment_name: Optional[str] = None
     receipt_type: Optional[str] = None
+    holding_id: Optional[int] = None
 
 class TransactionRead(TransactionBase):
     id: int

@@ -56,6 +56,7 @@ export interface Transaction {
   bank_name: string | null;
   investment_name: string | null;
   receipt_type: string | null;
+  holding_id: number | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -125,6 +126,54 @@ export interface ConvertedNetWorthResponse {
 export interface ExchangeRatesResponse {
   base: string;
   rates: Record<string, number>;
+}
+
+export interface Holding {
+  id: number;
+  user_id: number;
+  account_id: number;
+  ticker: string;
+  asset_name: string;
+  asset_type: string;
+  exchange: string | null;
+  quantity: number;
+  avg_cost_price: number;
+  total_invested: number;
+  currency: string;
+  purchase_date: string | null;
+  broker_name: string | null;
+  broker_account_last4: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface TickerSearchResult {
+  ticker: string;
+  name: string;
+  exchange: string;
+  asset_type: string;
+  currency: string;
+  current_price: number | null;
+}
+
+export interface QuoteResult {
+  ticker: string;
+  price: number;
+  change: number;
+  change_percent: number;
+  currency: string;
+  market_state: string;
+}
+
+export interface HistoryPoint {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
 }
 
 // Currency constants
@@ -255,6 +304,71 @@ export const api = {
 
   async getSpending(): Promise<CategorySpendingResponse> {
     return fetchWithAuth(`${API_BASE_URL}/analytics/spending`);
+  },
+
+  // ── Holdings ──
+  async getHoldings(): Promise<Holding[]> {
+    return fetchWithAuth(`${API_BASE_URL}/holdings`);
+  },
+
+  async searchTicker(query: string): Promise<TickerSearchResult[]> {
+    return fetchWithAuth(`${API_BASE_URL}/holdings/search?q=${encodeURIComponent(query)}`);
+  },
+
+  async getQuotes(tickers: string[]): Promise<Record<string, QuoteResult>> {
+    return fetchWithAuth(`${API_BASE_URL}/holdings/quotes?tickers=${tickers.join(",")}`);
+  },
+
+  async getHistory(ticker: string, period: string = "1mo"): Promise<HistoryPoint[]> {
+    return fetchWithAuth(`${API_BASE_URL}/holdings/history?ticker=${encodeURIComponent(ticker)}&period=${period}`);
+  },
+
+  async buyHolding(data: {
+    ticker: string;
+    asset_name: string;
+    asset_type: string;
+    exchange?: string;
+    quantity: number;
+    price_per_unit: number;
+    currency: string;
+    date: string;
+    debit_account_id: number;
+    investment_account_id: number;
+    broker_name?: string;
+    broker_account_last4?: string;
+    notes?: string;
+  }): Promise<Holding> {
+    return fetchWithAuth(`${API_BASE_URL}/holdings/buy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async sellHolding(data: {
+    holding_id: number;
+    quantity: number;
+    price_per_unit: number;
+    date: string;
+    deposit_account_id: number;
+  }): Promise<Holding> {
+    return fetchWithAuth(`${API_BASE_URL}/holdings/sell`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateHolding(id: number, data: { broker_name?: string; broker_account_last4?: string; notes?: string }): Promise<Holding> {
+    return fetchWithAuth(`${API_BASE_URL}/holdings/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteHolding(id: number): Promise<void> {
+    await fetchWithAuth(`${API_BASE_URL}/holdings/${id}`, { method: "DELETE" });
   },
 
   // ── Profile ──
