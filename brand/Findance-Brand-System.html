@@ -1,0 +1,73 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Findance Brand System</title><style>
+@font-face { font-family:'Cormorant Garamond'; src:url('../fonts/CormorantGaramond-var.ttf'); font-weight:300 700; }
+@font-face { font-family:'Cormorant Garamond'; src:url('../fonts/CormorantGaramond-Italic-var.ttf'); font-weight:300 700; font-style:italic; }
+@font-face { font-family:'Instrument Sans'; src:url('../fonts/InstrumentSans-var.ttf'); font-weight:400 700; }
+
+:root { --alabaster:#FBF9F5; --ivory:#F4F0E8; --bone:#EDE7DB; --obsidian:#0B0B0C;
+        --onyx:#141416; --charcoal:#1C1A17; --gold:#8A7A52; --gold-dark:#CBB68C; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--alabaster); color:var(--obsidian); font-family:'Instrument Sans',sans-serif; }
+.serif { font-family:'Cormorant Garamond',serif; }
+.label { font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--gold); }
+.hairline { border:none; border-top:1px solid var(--bone); }
+.dark { background:var(--obsidian); color:var(--ivory); position:relative; }
+.dark::after { content:''; position:absolute; inset:0; pointer-events:none; opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+.wrap { max-width:1120px; margin:0 auto; padding:72px 36px; }
+header h1 { font-family:'Cormorant Garamond'; font-weight:520; font-size:58px; letter-spacing:.005em; }
+header p { margin-top:10px; color:#6b6963; font-size:13.5px; max-width:56ch; line-height:1.8; }
+section { margin-top:72px; }
+h2 { font-family:'Cormorant Garamond'; font-weight:520; font-size:26px; margin:14px 0 26px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:22px; }
+.tile { border:1px solid var(--bone); padding:26px; display:flex; flex-direction:column; gap:16px; align-items:center; }
+.tile.dk { background:var(--obsidian); }
+.tile img { max-width:100%; height:88px; object-fit:contain; }
+.tile a { font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); text-decoration:none; border-bottom:1px solid var(--bone); padding-bottom:3px; }
+.sws { display:flex; flex-wrap:wrap; gap:26px; }
+.sw { width:118px; } .chip { height:74px; border:1px solid var(--bone); }
+.swl { font-size:11.5px; margin-top:9px; letter-spacing:.05em; } .swl span { color:#8a877f; }
+.spec { font-size:13px; line-height:2.2; color:#4b4a47; max-width:70ch; }
+.spec code { font-family:ui-monospace,monospace; font-size:12px; color:var(--obsidian); }
+.big { font-family:'Cormorant Garamond'; font-weight:520; font-size:44px; }
+.ui { font-size:15px; letter-spacing:.01em; }
+.caps { font-size:11px; letter-spacing:.32em; text-transform:uppercase; }
+</style></head><body><div class="wrap">
+<header>
+  <div class="label">brand system · v1 · phase 1–2</div>
+  <h1>findance</h1>
+  <p>Quiet luxury for personal finance. Obsidian, precise, hushed. Gold is treated like gold leaf — an edge, never a fill. When in doubt, remove something.</p>
+</header>
+<hr class="hairline">
+<section><h2>logo system</h2><div class="grid">
+  <div class="tile"><img src="logos/findance-wordmark-obsidian.svg"><a href="logos/findance-wordmark-obsidian.svg">wordmark · obsidian</a></div>
+  <div class="tile dk"><img src="logos/findance-wordmark-ivory.svg"><a href="logos/findance-wordmark-ivory.svg">wordmark · ivory</a></div>
+  <div class="tile"><img src="logos/findance-monogram-light.svg"><a href="logos/findance-monogram-light.svg">monogram · light surface</a></div>
+  <div class="tile dk"><img src="logos/findance-monogram-dark.svg"><a href="logos/findance-monogram-dark.svg">monogram · dark surface</a></div>
+  <div class="tile"><img src="logos/findance-lockup-horizontal-light.svg"><a href="logos/findance-lockup-horizontal-light.svg">lockup · horizontal</a></div>
+  <div class="tile dk"><img src="logos/findance-lockup-horizontal-dark.svg"><a href="logos/findance-lockup-horizontal-dark.svg">lockup · horizontal · dark</a></div>
+  <div class="tile"><img src="logos/findance-lockup-stacked-light.svg"><a href="logos/findance-lockup-stacked-light.svg">lockup · stacked</a></div>
+  <div class="tile dk"><img src="logos/findance-lockup-stacked-dark.svg"><a href="logos/findance-lockup-stacked-dark.svg">lockup · stacked · dark</a></div>
+  <div class="tile dk"><img src="icons/findance-app-icon.svg"><a href="icons/findance-app-icon.svg">app icon · matte onyx</a></div>
+  <div class="tile"><img src="logos/findance-monogram-mono.svg" style="color:#0B0B0C"><a href="logos/findance-monogram-mono.svg">monogram · monochrome</a></div>
+  <div class="tile"><img src="icons/findance-favicon-32.png" style="height:32px"><a href="icons/findance-favicon.ico">favicon · ico + 16/32 png</a></div>
+  <div class="tile"><a href="logos/construction.html">construction sheet →</a></div>
+</div></section>
+<section><h2>color</h2><div class="sws"><div class="sw"><div class="chip" style="background:#FBF9F5"></div><div class="swl">alabaster<br><span>#FBF9F5</span></div></div><div class="sw"><div class="chip" style="background:#F4F0E8"></div><div class="swl">ivory<br><span>#F4F0E8</span></div></div><div class="sw"><div class="chip" style="background:#EDE7DB"></div><div class="swl">bone<br><span>#EDE7DB</span></div></div><div class="sw"><div class="chip" style="background:#0B0B0C"></div><div class="swl">obsidian<br><span>#0B0B0C</span></div></div><div class="sw"><div class="chip" style="background:#141416"></div><div class="swl">onyx<br><span>#141416</span></div></div><div class="sw"><div class="chip" style="background:#1C1A17"></div><div class="swl">warm charcoal<br><span>#1C1A17</span></div></div><div class="sw"><div class="chip" style="background:#CBB68C"></div><div class="swl">champagne on dark<br><span>#CBB68C</span></div></div><div class="sw"><div class="chip" style="background:#8A7A52"></div><div class="swl">foil on light<br><span>#8A7A52</span></div></div></div>
+<p class="spec" style="margin-top:22px">Never pure #000 or #FFF. Champagne ≤ 5% of any screen; on light surfaces use the darker foil <code>#8A7A52</code>. Dark surfaces carry a 0.04-opacity grain for the matte finish.</p></section>
+<section><h2>type</h2>
+  <div class="big">Cormorant Garamond — display &amp; wordmark</div>
+  <p class="ui" style="margin-top:14px">Instrument Sans carries the interface: labels, numbers, body copy.</p>
+  <p class="caps" style="margin-top:14px; color:var(--gold)">small caps labels · tracked 0.32 em</p>
+</section>
+<section><h2>motion</h2>
+<p class="spec">Entrances <code>cubic-bezier(0.16, 1, 0.3, 1)</code> · transitions <code>cubic-bezier(0.65, 0, 0.35, 1)</code> · micro 200–350 ms · reveals 600–1200 ms · stagger 40–80 ms. It arrives; it never bounces.</p>
+<p style="margin-top:18px"><a class="label" href="motion/logo-reveal.html" style="text-decoration:none">▸ signature reveal, idle loader &amp; favicon micro — playable</a></p></section>
+<section><h2>all files</h2><p class="spec">
+logos/ — wordmark (SVG ×2, PNG ×2) · monogram (SVG ×3, PNG ×2) · lockups (SVG ×4) · construction.html<br>
+icons/ — app icon SVG + PNG 512/192/180/150 · favicon .ico + 16/32 PNG<br>
+fonts/ — Cormorant Garamond (roman + italic, variable) · Instrument Sans (variable)<br>
+motion/ — logo-reveal.html (source = spec) · tokens/ — tokens.json
+</p></section>
+</div></body></html>
