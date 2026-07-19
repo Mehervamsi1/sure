@@ -1,30 +1,13 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/we-promise/sure)
-[![View performance data on Skylight](https://badges.skylight.io/typical/s6PEZSKwcklL.svg)](https://oss.skylight.io/app/applications/s6PEZSKwcklL)
-[![Dosu](https://raw.githubusercontent.com/dosu-ai/assets/main/dosu-badge.svg)](https://app.dosu.dev/a72bdcfd-15f5-4edc-bd85-ea0daa6c3adc/ask)
-[![Pipelock Security Scan](https://github.com/we-promise/sure/actions/workflows/pipelock.yml/badge.svg)](https://github.com/we-promise/sure/actions/workflows/pipelock.yml)
+# Findance: a personal finance tracker
 
-<img width="1270" height="1140" alt="sure_shot" src="https://github.com/user-attachments/assets/9c6e03cc-3490-40ab-9a68-52e042c51293" />
-
-<p align="center">
-  <!-- Keep these links. Translations will automatically update with the README. -->
-  <a href="https://readme-i18n.com/de/we-promise/sure">Deutsch</a> | 
-  <a href="https://readme-i18n.com/es/we-promise/sure">Español</a> | 
-  <a href="https://readme-i18n.com/fr/we-promise/sure">Français</a> | 
-  <a href="https://readme-i18n.com/ja/we-promise/sure">日本語</a> | 
-  <a href="https://readme-i18n.com/ko/we-promise/sure">한국어</a> | 
-  <a href="https://readme-i18n.com/pt/we-promise/sure">Português</a> | 
-  <a href="https://readme-i18n.com/ru/we-promise/sure">Русский</a> | 
-  <a href="https://readme-i18n.com/zh/we-promise/sure">中文</a>
-</p>
-
-# Sure: The personal finance app for everyone
-
-<b>Get
-involved: [Discord](https://discord.gg/36ZGBsxYEK) • [Website](https://sure.am) • [Issues](https://github.com/we-promise/sure/issues)</b>
+Findance is a self-hosted personal-finance tracker — accounts, transactions, budgets, investments, and net-worth tracking, all under your own control on your own database.
 
 > [!IMPORTANT]
-> This repository is a community fork of the now-abandoned Maybe Finance project. <br />
-> Learn more in their [final release](https://github.com/maybe-finance/maybe/releases/tag/v0.6.0) doc.
+> **Attribution & licensing.** Findance is a fork of [Sure](https://github.com/we-promise/sure), the community-maintained continuation of the archived [Maybe Finance](https://github.com/maybe-finance/maybe) project. It is licensed under the [AGPLv3](LICENSE), the same license as the projects it builds on.
+>
+> Findance is **not affiliated with, or endorsed by, Maybe Finance Inc. or the Sure project**. "Maybe" is a trademark of Maybe Finance Inc.; no Maybe branding is used in this fork.
+>
+> Under the AGPLv3, if this application is made available to users over a network, those users are entitled to the complete corresponding source code, including any modifications.
 
 ## Backstory
 
@@ -40,9 +23,9 @@ That also didn’t work out — at least not as a sustainable B2C business — s
 
 Join us!
 
-## Hosting Sure
+## Hosting Findance
 
-Sure is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
+Findance is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
 
 ## Forking and Attribution
 

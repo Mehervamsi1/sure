@@ -16,7 +16,7 @@ es:
         no_api_key:
           title: "Clave API"
           heading: "Accede a los datos de tu cuenta de forma programática"
-          description: "Obtén acceso programático a tus datos de Sure con una clave API segura."
+          description: "Obtén acceso programático a tus datos de Findance con una clave API segura."
           what_you_can_do: "Qué puedes hacer con la API:"
           feature_1: "Accede a los datos de tu cuenta de forma programática"
           feature_2: "Crea integraciones y aplicaciones personalizadas"
@@ -37,7 +37,7 @@ es:
           never_expires: "Nunca expira"
           permissions: "Permisos"
           usage_instructions_title: "Cómo usar tu clave API"
-          usage_instructions: "Incluye tu clave API en el encabezado X-Api-Key al realizar solicitudes a la API de Maybe:"
+          usage_instructions: "Incluye tu clave API en el encabezado X-Api-Key al realizar solicitudes a la API de Findance:"
           regenerate_key: "Crear Nueva Clave"
           revoke_key: "Revocar Clave"
           revoke_confirmation: "¿Estás seguro de que deseas revocar esta clave API? Esta acción no se puede deshacer y deshabilitará inmediatamente todas las aplicaciones que usen esta clave."

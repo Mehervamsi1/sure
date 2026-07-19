@@ -43,18 +43,18 @@ ca:
         unassigned_account: Necessites crear un nou compte per a les files sense assignar?
       show:
         account_mapping_description: Assigna tots els comptes del teu fitxer importat
-          als comptes existents de Maybe. També pots afegir nous comptes o deixar-los
+          als comptes existents de Findance. També pots afegir nous comptes o deixar-los
           sense categoria.
         account_mapping_title: Assigna els teus comptes
         account_type_mapping_description: Assigna tots els tipus de compte del teu
-          fitxer importat als de Maybe
+          fitxer importat als de Findance
         account_type_mapping_title: Assigna els teus tipus de compte
         category_mapping_description: Assigna totes les categories del teu fitxer
-          importat a les categories existents de Maybe. També pots afegir-ne de noves
+          importat a les categories existents de Findance. També pots afegir-ne de noves
           o deixar-les sense categoria.
         category_mapping_title: Assigna les teves categories
         tag_mapping_description: Assigna totes les etiquetes del teu fitxer importat
-          a les etiquetes existents de Maybe. També pots afegir-ne de noves o deixar-les
+          a les etiquetes existents de Findance. També pots afegir-ne de noves o deixar-les
           sense categoria.
         tag_mapping_title: Assigna les teves etiquetes
     uploads:

@@ -40,7 +40,7 @@ ca:
         revoke_key: Revoca clau
         title: La teva clau API
         usage_instructions: 'Inclou la teva clau API a la capçalera X-Api-Key quan
-          facis peticions a l''API de Maybe:'
+          facis peticions a l''API de Findance:'
         usage_instructions_title: Com utilitzar la teva clau API
       new:
         cancel: Cancel·la
@@ -68,7 +68,7 @@ ca:
         title: Crea clau API
       no_api_key:
         create_api_key: Crea clau API
-        description: Obtingues accés programàtic a les teves dades de Maybe amb una
+        description: Obtingues accés programàtic a les teves dades de Findance amb una
           clau API segura.
         feature_1: Accedeix a les teves dades de compte programàticament
         feature_2: Construeix integracions i aplicacions personalitzades
@@ -98,11 +98,11 @@ ca:
           revoke_key: Revoca clau
           title: La teva clau API
           usage_instructions: 'Inclou la teva clau API a la capçalera X-Api-Key quan
-            facis peticions a l''API de Maybe:'
+            facis peticions a l''API de Findance:'
           usage_instructions_title: Com utilitzar la teva clau API
         no_api_key:
           create_api_key: Crea clau API
-          description: Obtingues accés programàtic a les teves dades de Maybe amb una
+          description: Obtingues accés programàtic a les teves dades de Findance amb una
             clau API segura.
           feature_1: Accedeix a les teves dades de compte programàticament
           feature_2: Construeix integracions i aplicacions personalitzades

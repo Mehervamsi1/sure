@@ -75,17 +75,17 @@ en:
         unassigned_account: Need to create a new account for unassigned rows?
       show:
         account_mapping_description: Assign all of your imported file's accounts to
-          Maybe's existing accounts.  You can also add new accounts or leave them
+          Findance's existing accounts.  You can also add new accounts or leave them
           uncategorized.
         account_mapping_title: Assign your accounts
         account_type_mapping_description: Assign all of your imported file's account
-          types to Maybe's
+          types to Findance's
         account_type_mapping_title: Assign your account types
         category_mapping_description: Assign all of your imported file's categories
-          to Maybe's existing categories.  You can also add new categories or leave
+          to Findance's existing categories.  You can also add new categories or leave
           them uncategorized.
         category_mapping_title: Assign your categories
-        tag_mapping_description: Assign all of your imported file's tags to Maybe's
+        tag_mapping_description: Assign all of your imported file's tags to Findance's
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
     uploads:
@@ -135,7 +135,7 @@ en:
       rule_import: "Rule import"
       pdf_import: "PDF import"
       document_import: "Document import"
-      sure_import: "Sure import"
+      sure_import: "Findance import"
     steps:
       upload: Upload
       configure: Configure
@@ -164,7 +164,7 @@ en:
           rule_import: "Rule"
           pdf_import: "PDF"
           document_import: "Document"
-          sure_import: "Sure"
+          sure_import: "Findance"
         status:
           in_progress: In progress
           uploading: Processing rows
@@ -191,7 +191,7 @@ en:
       import_rules: Import rules
       import_transactions: Import transactions
       import_qif: Import from Quicken (QIF)
-      import_sure: Import from Sure
+      import_sure: Import from Findance
       import_sure_description: Full-export .ndjson file
       import_file: Import document
       import_file_description: AI-powered analysis for PDFs and searchable file upload

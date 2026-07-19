@@ -21,7 +21,7 @@ ro:
       submit: Creează cont
       title: Creează-ți contul
       welcome_body: Pentru a începe, trebuie să îți creezi un cont nou. Apoi vei putea configura setări suplimentare în aplicație.
-      welcome_title: Bine ai venit la Self Hosted Maybe!
+      welcome_title: Bine ai venit la Self Hosted Findance!
       password_placeholder: Introdu parola
       password_requirements:
         length: Minim 8 caractere
