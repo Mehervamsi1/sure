@@ -1,0 +1,61 @@
+/* Findance motion — quiet, weighted, confident. It arrives; it never bounces.
+   Entrances: cubic-bezier(0.16, 1, 0.3, 1) · in/out: cubic-bezier(0.65, 0, 0.35, 1) */
+
+/* Turbo page-load: hairline champagne progress */
+.turbo-progress-bar {
+  height: 2px;
+  background: var(--color-gold);
+}
+
+/* Signature reveal — coin-edge mark mints itself (auth/splash), 1250ms */
+.fdz-reveal .fdz-ring {
+  stroke-dasharray: 1496;
+  stroke-dashoffset: 1496;
+  animation: fdz-draw 750ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.fdz-reveal .fdz-mill {
+  opacity: 0;
+  transform-origin: 256px 256px;
+  animation: fdz-mill 700ms cubic-bezier(0.16, 1, 0.3, 1) 200ms forwards;
+}
+.fdz-reveal .fdz-glyph {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: fdz-settle 700ms cubic-bezier(0.16, 1, 0.3, 1) 420ms forwards;
+}
+.fdz-reveal .fdz-shimmer {
+  stroke-dasharray: 140 1356;
+  opacity: 0;
+  animation: fdz-sweep 620ms cubic-bezier(0.65, 0, 0.35, 1) 1050ms forwards;
+}
+@keyframes fdz-draw { to { stroke-dashoffset: 0; } }
+@keyframes fdz-mill { from { opacity: 0; transform: rotate(-7deg); } to { opacity: 1; transform: rotate(0); } }
+@keyframes fdz-settle { to { opacity: 1; transform: translateY(0); } }
+@keyframes fdz-sweep {
+  0% { opacity: 0; stroke-dashoffset: 0; }
+  18% { opacity: 0.85; }
+  100% { opacity: 0; stroke-dashoffset: -1496; }
+}
+
+/* Idle breathing loader — apply .fdz-breathe to the logomark while waiting */
+.fdz-breathe .fdz-ring,
+.fdz-breathe .fdz-glyph {
+  transform-origin: 256px 256px;
+  animation: fdz-breathe 3200ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.fdz-breathe .fdz-mill {
+  transform-origin: 256px 256px;
+  animation: fdz-slowturn 14s linear infinite;
+}
+@keyframes fdz-breathe { 0%, 100% { opacity: 0.88; transform: scale(1); } 50% { opacity: 1; transform: scale(1.012); } }
+@keyframes fdz-slowturn { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .fdz-reveal .fdz-ring, .fdz-reveal .fdz-mill, .fdz-reveal .fdz-glyph, .fdz-reveal .fdz-shimmer,
+  .fdz-breathe .fdz-ring, .fdz-breathe .fdz-glyph, .fdz-breathe .fdz-mill {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+}
