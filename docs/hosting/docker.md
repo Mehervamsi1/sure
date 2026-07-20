@@ -111,6 +111,17 @@ and change it to `true`
 RAILS_ASSUME_SSL: "true"
 ```
 
+#### WebAuthn MFA (passkeys and security keys)
+
+If you enable passkeys, Touch ID, Windows Hello, or hardware security keys as MFA credentials, pin the WebAuthn relying party settings in your `.env` file:
+
+```txt
+WEBAUTHN_RP_ID="example.com"
+WEBAUTHN_ALLOWED_ORIGINS="https://sure.example.com"
+```
+
+`WEBAUTHN_RP_ID` should usually be your registrable domain, not a full URL. See [WebAuthn MFA Configuration](webauthn.md) before changing hostnames or reverse proxy settings for an instance with registered passkeys.
+
 #### Binding to IPv6 (optional)
 
 By default Sure listens on `0.0.0.0:3000` (IPv4 wildcard) inside the container and Docker publishes the port on the host's IPv4 interface only. If you want the app reachable over IPv6 as well, two things need to change:
@@ -168,6 +179,16 @@ The first time you run the app, you will need to register a new account by hitti
 
 1. Enter your email
 2. Enter a password
+
+### Step 5a: Restrict future signups (optional)
+
+After creating your initial admin account, you can control how other people join your self-hosted instance from **Settings > Self-Hosting > Onboarding**.
+
+- **Open**: Anyone can create an account from the registration page.
+- **Invite-only**: New account creation stays enabled, but signups require a valid invite code.
+- **Closed**: The registration page is disabled for new signups.
+
+If you do not want additional self-service registrations, switch the instance to **Closed** after the initial setup.
 
 ### Step 6: Run the app in the background
 
@@ -240,6 +261,7 @@ Pipelock sits between Sure and external services, scanning AI traffic for:
 - **Secret exfiltration** (DLP): catches API keys, tokens, or personal data leaking in prompts
 - **Prompt injection**: detects attempts to override system instructions
 - **Tool poisoning**: validates MCP tool calls against known-safe patterns
+- **Signed receipts**: optional hash-chained evidence of mediated decisions when `flight_recorder.dir` and `signing_key_path` are configured
 
 When using `compose.example.ai.yml`, Pipelock is always running. External AI agents should connect to port 8889 (MCP reverse proxy) instead of directly to Sure's `/mcp` on port 3000.
 
@@ -305,3 +327,12 @@ docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # Th
 ### Slow `.csv` import (processing rows taking longer than expected)
 
 Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.
+
+### Inspecting background jobs (`/sidekiq`)
+
+Sure ships the Sidekiq Web dashboard at `/sidekiq`. The route only exists for a signed-in **super admin** — the first user created on your instance. Anyone else (including logged-out visitors) gets a 404, so there is nothing to configure to keep it safe. If you want a second layer of protection anyway, set both `SIDEKIQ_WEB_USERNAME` and `SIDEKIQ_WEB_PASSWORD` in your environment file to additionally require basic-auth credentials; there are no default credentials.
+
+For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings → Background jobs** — it maps queue state onto the actual records and offers safe recovery actions. The Sidekiq dashboard is a break-glass tool; two warnings when using it directly:
+
+- Never manually retry `SimplefinConnectionUpdateJob` — it consumes a single-use setup token, and a retry permanently breaks that connection attempt.
+- Deleting or retrying jobs does **not** update the corresponding Sure record (a deleted `ImportJob` leaves its import stuck in `importing`) — use Settings → Background jobs for record-level recovery.

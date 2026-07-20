@@ -14,6 +14,10 @@ module SnaptradeItem::Provided
     )
   end
 
+  def oauth_snaptrade_provider
+    snaptrade_provider || Provider::Snaptrade.new
+  end
+
   # Clean up SnapTrade user when item is destroyed
   def delete_snaptrade_user
     return unless user_registered?
@@ -132,6 +136,22 @@ module SnaptradeItem::Provided
     )
   end
 
+  def start_oauth_device_flow(scope: "read")
+    oauth_snaptrade_provider.start_device_authorization(scope: scope)
+  end
+
+  def complete_oauth_device_flow!(device_code:)
+    token_response = oauth_snaptrade_provider.poll_device_token(device_code: device_code)
+    update!(
+      oauth_access_token: token_response["access_token"],
+      oauth_refresh_token: token_response["refresh_token"],
+      oauth_token_type: token_response["token_type"],
+      oauth_scope: token_response["scope"],
+      oauth_token_expires_at: token_response["expires_in"].present? ? Time.current + token_response["expires_in"].to_i.seconds : nil
+    )
+    token_response
+  end
+
   # Fetch all brokerage connections from SnapTrade API
   # Returns array of connection objects
   def fetch_connections
@@ -160,13 +180,14 @@ module SnaptradeItem::Provided
     return [] unless credentials_configured? && user_registered?
 
     all_users = list_all_users
-    all_users.reject { |uid| uid == snaptrade_user_id }
+    all_users.select { |uid| uid != snaptrade_user_id && uid.start_with?("family_#{family_id}_") }
   end
 
   # Delete an orphaned SnapTrade user and all their connections
   def delete_orphaned_user(user_id)
     return false unless credentials_configured?
     return false if user_id == snaptrade_user_id # Don't delete current user
+    return false unless user_id.start_with?("family_#{family_id}_")
 
     snaptrade_provider.delete_user(user_id: user_id)
     true

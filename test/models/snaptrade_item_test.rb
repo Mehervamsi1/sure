@@ -11,16 +11,21 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_includes item.errors[:name], "can't be blank"
   end
 
-  test "validates presence of client_id on create" do
+  test "requires client_id when consumer_key is present" do
     item = SnaptradeItem.new(family: @family, name: "Test", consumer_key: "test")
     assert_not item.valid?
     assert_includes item.errors[:client_id], "can't be blank"
   end
 
-  test "validates presence of consumer_key on create" do
+  test "requires consumer_key when client_id is present" do
     item = SnaptradeItem.new(family: @family, name: "Test", client_id: "test")
     assert_not item.valid?
     assert_includes item.errors[:consumer_key], "can't be blank"
+  end
+
+  test "allows oauth-only items without api credentials" do
+    item = SnaptradeItem.new(family: @family, name: "Test")
+    assert item.valid?
   end
 
   test "credentials_configured? returns true when credentials are set" do
@@ -74,5 +79,43 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     )
     provider = item.snaptrade_provider
     assert_instance_of Provider::Snaptrade, provider
+  end
+
+  test "orphaned_users only includes users for the same family" do
+    item = SnaptradeItem.new(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "family_#{@family.id}_111",
+      snaptrade_user_secret: "secret"
+    )
+
+    item.stubs(:list_all_users).returns([
+      "family_#{@family.id}_111",
+      "family_#{@family.id}_222",
+      "family_999_333",
+      "legacy_user_444"
+    ])
+
+    assert_equal([ "family_#{@family.id}_222" ], item.orphaned_users)
+  end
+
+  test "delete_orphaned_user rejects users outside the current family namespace" do
+    item = SnaptradeItem.new(
+      family: @family,
+      name: "Test",
+      client_id: "test",
+      consumer_key: "test",
+      snaptrade_user_id: "family_#{@family.id}_111",
+      snaptrade_user_secret: "secret"
+    )
+
+    provider = mock
+    provider.expects(:delete_user).never
+    item.stubs(:snaptrade_provider).returns(provider)
+
+    assert_not item.delete_orphaned_user("family_999_222")
+    assert_not item.delete_orphaned_user("legacy_user_333")
   end
 end

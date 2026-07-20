@@ -7,7 +7,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -26,7 +26,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -75,7 +75,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -91,7 +91,7 @@ class OidcAccountsController < ApplicationController
     @pending_auth = session[:pending_oidc_auth]
 
     if @pending_auth.nil?
-      redirect_to new_session_path, alert: "No pending OIDC authentication found"
+      redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
@@ -104,7 +104,7 @@ class OidcAccountsController < ApplicationController
     # domain is not allowed, block JIT account creation—unless there's a
     # pending invitation for this user.
     unless invitation.present? || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
-      redirect_to new_session_path, alert: "SSO account creation is disabled. Please contact an administrator."
+      redirect_to new_session_path, alert: t(".account_creation_disabled")
       return
     end
 
@@ -136,24 +136,47 @@ class OidcAccountsController < ApplicationController
       @user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
     end
 
-    if @user.save
-      # Create the OIDC (or other SSO) identity
-      identity = OidcIdentity.create_from_omniauth(
-        build_auth_hash(@pending_auth),
-        @user
-      )
+    identity = nil
+    account_created = false
 
+    begin
+      account_created = ActiveRecord::Base.transaction do
+        unless @user.save
+          raise ActiveRecord::Rollback
+        end
+
+        # Mark invitation as accepted if one was used
+        invitation&.update!(accepted_at: Time.current)
+
+        # Joining an existing family via invitation must honor the family's
+        # default sharing policy, matching Invitation#accept_for. Without this a
+        # JIT SSO invitee lands in the family but sees none of its accounts.
+        @user.family.auto_share_existing_accounts_with(@user) if invitation.present?
+
+        # Create the OIDC (or other SSO) identity
+        identity = OidcIdentity.create_from_omniauth(
+          build_auth_hash(@pending_auth),
+          @user
+        )
+
+        true
+      end
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+      # Expected persistence failures (e.g. a duplicate identity) roll the whole
+      # onboarding back and re-render the form. Unexpected errors propagate so
+      # they surface instead of being hidden as a form validation message.
+      @user.errors.add(:base, e.message)
+    end
+
+    if account_created
       # Only log JIT account creation if identity was successfully created
-      if identity.persisted?
+      if identity&.persisted?
         SsoAuditLog.log_jit_account_created!(
           user: @user,
           provider: @pending_auth["provider"],
           request: request
         )
       end
-
-      # Mark invitation as accepted if one was used
-      invitation&.update!(accepted_at: Time.current)
 
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)
@@ -164,7 +187,7 @@ class OidcAccountsController < ApplicationController
       elsif accept_pending_invitation_for(@user)
         t("invitations.accept_choice.joined_household")
       else
-        "Welcome! Your account has been created."
+        t(".account_created")
       end
       redirect_to root_path, notice: notice
     else

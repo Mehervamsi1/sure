@@ -119,24 +119,18 @@ class SimplefinAccount < ApplicationRecord
     end
 
     def parse_balance_date(balance_date_value)
+      parsed = Simplefin::DateUtils.parse_provider_time(balance_date_value)
+      return parsed if parsed.present?
       return nil if balance_date_value.nil?
 
-      case balance_date_value
-      when String
-        Time.parse(balance_date_value)
-      when Numeric
-        Time.at(balance_date_value)
-      when Time, DateTime
-        balance_date_value
-      else
-        nil
-      end
-    rescue ArgumentError, TypeError
+      Rails.logger.warn("Invalid balance date for SimpleFin account: #{balance_date_value}")
+      nil
+    rescue ArgumentError, TypeError, NameError
       Rails.logger.warn("Invalid balance date for SimpleFin account: #{balance_date_value}")
       nil
     end
     def has_balance
       return if current_balance.present? || available_balance.present?
-      errors.add(:base, "SimpleFin account must have either current or available balance")
+      errors.add(:base, :no_balance)
     end
 end

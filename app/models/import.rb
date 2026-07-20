@@ -2,6 +2,23 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
+  # permanently, wedging the record in importing/reverting with no UI recourse.
+  # After this idle window the job is presumed lost and the user may force the
+  # record into a retryable terminal status. Imports finish in minutes, so an
+  # hour of silence dwarfs any legitimate run.
+  PRESUMED_LOST_AFTER = 1.hour
+
+  # User-facing (shown as the import's error in the UI), so resolved through
+  # i18n at call time rather than frozen at boot.
+  def self.lost_error_message
+    I18n.t(
+      "imports.errors.presumed_lost",
+      default: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+    )
+  end
+
+  # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
   ALLOWED_CSV_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
@@ -9,9 +26,16 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport CategoryImport RuleImport PdfImport QifImport SureImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
+
+  def self.separator_options
+    [
+      [ I18n.t("activerecord.attributes.import.col_seps.comma"), "," ],
+      [ I18n.t("activerecord.attributes.import.col_seps.semicolon"), ";" ]
+    ]
+  end
 
   NUMBER_FORMATS = {
     "1,234.56" => { separator: ".", delimiter: "," },  # US/UK/Asia
@@ -24,15 +48,24 @@ class Import < ApplicationRecord
     Date.new(1970, 1, 1)..Date.today.next_year(5)
   end
 
+  def self.max_csv_size
+    MAX_CSV_SIZE
+  end
+
   AMOUNT_TYPE_STRATEGIES = %w[signed_amount custom_column].freeze
 
   belongs_to :family
   belongs_to :account, optional: true
+  belongs_to :account_statement, optional: true
+  belongs_to :import_session, optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
+  before_save :ensure_utf8_encoding
+  normalizes :client_chunk_id, with: ->(value) { value.strip.presence }
 
   scope :ordered, -> { order(created_at: :desc) }
+  scope :ordered_by_sequence, -> { order(:sequence, :created_at) }
 
   enum :status, {
     pending: "pending",
@@ -48,9 +81,15 @@ class Import < ApplicationRecord
   validates :col_sep, inclusion: { in: SEPARATORS.map(&:last) }
   validates :signage_convention, inclusion: { in: SIGNAGE_CONVENTIONS }, allow_nil: true
   validates :number_format, presence: true, inclusion: { in: NUMBER_FORMATS.keys }
+  validates :sequence, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validates :client_chunk_id, length: { maximum: 255 }, allow_blank: true
+  validates :checksum, length: { is: 64 }, allow_blank: true
   validate :custom_column_import_requires_identifier
   validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family
+  validate :import_session_belongs_to_family
+  validate :session_chunk_metadata
+  validate :session_payloads_are_json_objects
   validate :rows_to_skip_within_file_bounds
 
   has_many :rows, dependent: :destroy
@@ -144,6 +183,29 @@ class Import < ApplicationRecord
     RevertImportJob.perform_later(self)
   end
 
+  def presumed_lost?
+    (importing? || reverting?) && updated_at < PRESUMED_LOST_AFTER.ago
+  end
+
+  # Escape hatch for imports whose background job died mid-flight. Only
+  # allowed once the record has been idle past PRESUMED_LOST_AFTER, and the
+  # with_lock re-check means a job finishing between page render and button
+  # click wins. Every import! runs in a single DB transaction, so a lost job
+  # rolled its data back — failing the record is safe and re-enables the
+  # existing "Try again" (failed) / revert-retry (revert_failed) paths.
+  def force_fail!(error_message = self.class.lost_error_message)
+    with_lock do
+      return false unless presumed_lost?
+
+      update!(
+        status: reverting? ? :revert_failed : :failed,
+        error: error_message
+      )
+    end
+
+    true
+  end
+
   def revert
     Import.transaction do
       accounts.destroy_all
@@ -202,21 +264,22 @@ class Import < ApplicationRecord
   def generate_rows_from_csv
     rows.destroy_all
 
-    mapped_rows = csv_rows.map do |row|
+    mapped_rows = csv_rows.map.with_index(1) do |row, index|
       {
-        account: row[account_col_label].to_s,
-        date: row[date_col_label].to_s,
-        qty: sanitize_number(row[qty_col_label]).to_s,
-        ticker: row[ticker_col_label].to_s,
-        exchange_operating_mic: row[exchange_operating_mic_col_label].to_s,
-        price: sanitize_number(row[price_col_label]).to_s,
-        amount: sanitize_number(row[amount_col_label]).to_s,
-        currency: (row[currency_col_label] || default_currency).to_s,
-        name: (row[name_col_label] || default_row_name).to_s,
-        category: row[category_col_label].to_s,
-        tags: row[tags_col_label].to_s,
-        entity_type: row[entity_type_col_label].to_s,
-        notes: row[notes_col_label].to_s
+        source_row_number: index,
+        account: csv_value(row, account_col_label, "account", "account_name").to_s,
+        date: csv_value(row, date_col_label, "date").to_s,
+        qty: sanitize_number(csv_value(row, qty_col_label, "qty", "quantity")).to_s,
+        ticker: csv_value(row, ticker_col_label, "ticker").to_s,
+        exchange_operating_mic: csv_value(row, exchange_operating_mic_col_label, "exchange_operating_mic").to_s,
+        price: sanitize_number(csv_value(row, price_col_label, "price")).to_s,
+        amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
+        currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
+        name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
+        category: csv_value(row, category_col_label, "category").to_s,
+        tags: csv_value(row, tags_col_label, "tags").to_s,
+        entity_type: csv_value(row, entity_type_col_label, "entity_type", "account_type", "type").to_s,
+        notes: csv_value(row, notes_col_label, "notes").to_s
       }
     end
 
@@ -258,12 +321,33 @@ class Import < ApplicationRecord
     uploaded? && rows_count > 0
   end
 
+  def configured_for_status_detail?
+    configured?
+  end
+
   def cleaned?
     configured? && rows.all?(&:valid?)
   end
 
   def publishable?
     cleaned? && mappings.all?(&:valid?)
+  end
+
+  def cleaned_from_validation_stats?(invalid_rows_count:)
+    configured? && invalid_rows_count.zero?
+  end
+
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    cleaned_from_validation_stats?(invalid_rows_count: invalid_rows_count) && mappings.all?(&:valid?)
+  end
+
+  def mapping_status_counts
+    mappable_ids = mappings.pluck(:mappable_id)
+
+    {
+      mappings_count: mappable_ids.size,
+      unassigned_mappings_count: mappable_ids.count(&:nil?)
+    }
   end
 
   def revertable?
@@ -354,6 +438,55 @@ class Import < ApplicationRecord
       account&.currency || family.currency
     end
 
+    def csv_value(row, label, *aliases)
+      return if label.blank?
+
+      [ label, *aliases ].each do |candidate|
+        header = header_for(candidate)
+        next if header.blank?
+
+        value = row[header]
+        return value if value.present?
+      end
+
+      nil
+    end
+
+    def header_for(candidate)
+      return if candidate.blank?
+
+      normalized_csv_headers[normalize_header(candidate)]
+    end
+
+    def normalized_csv_headers
+      @normalized_csv_headers ||= begin
+        grouped_headers = Array(csv_headers)
+          .filter_map do |header|
+            normalized = normalize_header(header)
+            next if normalized.blank?
+
+            [ normalized, header ]
+          end
+          .group_by(&:first)
+
+        duplicate_headers = grouped_headers.values.filter_map do |headers|
+          originals = headers.map(&:last).uniq
+          originals if originals.many?
+        end
+
+        if duplicate_headers.any?
+          errors.add(:base, :duplicate_headers, columns: duplicate_headers.map { |headers| headers.join(", ") }.join("; "))
+          raise ActiveRecord::RecordInvalid, self
+        end
+
+        grouped_headers.transform_values { |headers| headers.first.last }
+      end
+    end
+
+    def normalize_header(header)
+      header.to_s.strip.downcase.gsub(/\*/, "").gsub(/[\s-]+/, "_")
+    end
+
     def parsed_csv
       return @parsed_csv if defined?(@parsed_csv)
 
@@ -365,6 +498,13 @@ class Import < ApplicationRecord
       @parsed_csv = self.class.parse_csv_str(csv_content, col_sep: col_sep)
     end
 
+    # Normalizes a raw CSV numeric string into a plain, parseable decimal string
+    # based on the import's configured +number_format+ (thousands delimiter and
+    # decimal separator). Returns "" when the value is blank, the format is
+    # unknown, or the result is not a valid number.
+    #
+    # @param value [String, nil] the raw cell value from the CSV
+    # @return [String] a normalized number like "1234.56", or "" if invalid
     def sanitize_number(value)
       return "" if value.nil?
 
@@ -376,7 +516,20 @@ class Import < ApplicationRecord
 
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
-        sanitized = sanitized.gsub(/\s+/, "") # Remove all spaces first
+        # The thousands "space" can be an ASCII space, a non-breaking space
+        # (U+00A0) or a narrow no-break space (U+202F) depending on the locale
+        # or exporter. Ruby's \s does not match those Unicode spaces, so strip
+        # every kind of whitespace via the Unicode property.
+        sanitized = sanitized.gsub(/\p{Space}/, "")
+
+        # Strip currency symbols/codes only at the leading/trailing edges (e.g.
+        # "€1 234,56" or "1 234,56 kr"). Interior characters are deliberately
+        # left in place so a misconfigured US-style value like "1,234.56" keeps
+        # its period and is rejected by the numeric guard below, rather than
+        # being silently reinterpreted as 1.23456. Digits, the separator, and a
+        # minus sign are preserved so signed values and the guard still work.
+        edge_junk = /\A[^\d#{Regexp.escape(format[:separator])}\-]+|[^\d#{Regexp.escape(format[:separator])}\-]+\z/
+        sanitized = sanitized.gsub(edge_junk, "")
       else
         sanitized = sanitized.gsub(/[^\d#{Regexp.escape(format[:delimiter])}#{Regexp.escape(format[:separator])}\-]/, "")
 
@@ -478,6 +631,25 @@ class Import < ApplicationRecord
       return if account.family_id == family_id
 
       errors.add(:account, "must belong to your family")
+    end
+
+    def import_session_belongs_to_family
+      return if import_session.nil?
+      return if import_session.family_id == family_id
+
+      errors.add(:import_session, "must belong to your family")
+    end
+
+    def session_chunk_metadata
+      return if import_session.nil?
+
+      errors.add(:sequence, "must be present for import session chunks") if sequence.blank?
+      errors.add(:checksum, "must be present for import session chunks") if checksum.blank?
+    end
+
+    def session_payloads_are_json_objects
+      errors.add(:summary, "must be an object") unless summary.is_a?(Hash)
+      errors.add(:error_details, "must be an object") unless error_details.is_a?(Hash)
     end
 
     def rows_to_skip_within_file_bounds

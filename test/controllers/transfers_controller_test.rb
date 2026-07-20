@@ -150,6 +150,123 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "can create transfer with source fee" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          source_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 100, transfer.amount
+    assert_equal 3, transfer.derived_source_fee_amount
+    assert_equal 0, transfer.derived_destination_fee_amount
+    # Outflow should be principal only (no fee baked in)
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Fee transaction should be created
+    assert_equal 1, transfer.fee_transactions.count
+    fee_tx = transfer.fee_transactions.first
+    assert_equal "standard", fee_tx.kind
+    assert_equal 3, fee_tx.entry.amount
+    assert_equal accounts(:depository).id, fee_tx.entry.account_id
+    assert transfer.has_source_fee?
+    assert_not transfer.has_destination_fee?
+  end
+
+  test "can create transfer with destination fee" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          destination_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 100, transfer.amount
+    assert_equal 0, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
+    # Outflow should be principal only
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Fee transaction should be created
+    assert_equal 1, transfer.fee_transactions.count
+    fee_tx = transfer.fee_transactions.first
+    assert_equal "standard", fee_tx.kind
+    assert_equal 3, fee_tx.entry.amount
+    assert_equal accounts(:credit_card).id, fee_tx.entry.account_id
+    assert_not transfer.has_source_fee?
+    assert transfer.has_destination_fee?
+  end
+
+  test "can create transfer with both source and destination fees" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          source_fee_amount: 2,
+          destination_fee_amount: 3
+        }
+      }
+    end
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 100, transfer.amount
+    assert_equal 2, transfer.derived_source_fee_amount
+    assert_equal 3, transfer.derived_destination_fee_amount
+    # Outflow should be principal only
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    # Inflow should be -(converted_principal)
+    assert_equal(-100, transfer.inflow_transaction.entry.amount)
+    # Two fee transactions should be created
+    assert_equal 2, transfer.fee_transactions.count
+    source_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:depository).id }
+    dest_fee_tx = transfer.fee_transactions.find { |t| t.entry.account_id == accounts(:credit_card).id }
+    assert_equal 2, source_fee_tx.entry.amount
+    assert_equal 3, dest_fee_tx.entry.amount
+    assert transfer.has_fees?
+  end
+
+  test "derived fee methods reflect fee transaction entry edits" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        source_fee_amount: 3
+      }
+    }
+
+    transfer = Transfer.order(created_at: :desc).first
+    assert_equal 3, transfer.derived_source_fee_amount
+
+    # Simulate an independent edit of the fee transaction entry
+    fee_tx = transfer.fee_transactions.first
+    fee_tx.entry.update!(amount: 5)
+
+    # Derived fee should reflect the updated entry
+    transfer.reload
+    assert_equal 5, transfer.derived_source_fee_amount
+    assert transfer.has_source_fee?
+  end
+
   test "exchange_rate endpoint returns same_currency for matching currencies" do
     get exchange_rate_url, params: {
       from: "USD",
@@ -197,5 +314,49 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_raises(ActiveRecord::RecordNotFound) do
       transfer.reload
     end
+  end
+
+  test "mark_as_recurring creates a recurring transfer" do
+    transfer = transfers(:one)
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+
+    assert_difference -> { RecurringTransaction.where(family: family).count }, +1 do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+
+    rt = RecurringTransaction.where(family: family).last
+    assert rt.transfer?
+    assert_equal transfer.outflow_transaction.entry.account, rt.account
+    assert_equal transfer.inflow_transaction.entry.account, rt.destination_account
+    assert rt.manual?
+    assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+    assert_redirected_to transactions_path
+  end
+
+  test "mark_as_recurring is idempotent: second call flashes already-exists" do
+    transfer = transfers(:one)
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+
+    post mark_as_recurring_transfer_url(transfer)
+    assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
+  end
+
+  test "mark_as_recurring is rejected when recurring_transactions_disabled" do
+    transfer = transfers(:one)
+    family = users(:family_admin).family
+    family.update!(recurring_transactions_disabled: true)
+    family.recurring_transactions.destroy_all
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
   end
 end

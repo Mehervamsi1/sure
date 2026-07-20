@@ -19,6 +19,116 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show lazily loads statement tab data unless statements tab is active" do
+    AccountStatement::Coverage.expects(:for_year).never
+    AccountStatement.expects(:reconciliation_statuses_for).never
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "select[name='statement_year']", count: 0
+    statements_path = account_path(@account, tab: "statements")
+    assert_select "turbo-frame[src='#{statements_path}']"
+  end
+
+  test "statements tab links escape turbo frame for full-page navigation" do
+    # Upload a statement to ensure table rows render
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      file: uploaded_file(
+        filename: "test.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 test content"
+      ),
+      account: @account
+    )
+
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+
+    # Inbox link escapes frame
+    assert_select "a[href='#{account_statements_path}'][data-turbo-frame='_top']"
+
+    # Statement filename link escapes frame
+    assert_select "a[data-turbo-frame='_top']", text: statement.filename
+
+    # Eye/view icon escapes frame and opens in new tab
+    assert_select "a[target='_blank'][data-turbo-frame='_top'][aria-label='#{I18n.t("account_statements.table.view")}']"
+
+    # Edit icon escapes frame
+    assert_select "a[href='#{account_statement_path(statement)}'][data-turbo-frame='_top'][aria-label='#{I18n.t("account_statements.table.edit")}']"
+
+    # Unlink button escapes frame
+    assert_select "form[action='#{unlink_account_statement_path(statement)}'][data-turbo-frame='_top'] button"
+  end
+
+  test "statements tab shows coverage and upload for statement managers with account write access" do
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file][accept='.pdf,.csv,.xlsx']"
+    assert_select "select[name='statement_year']"
+    assert_select "p", text: I18n.l(Date.current.prev_month.beginning_of_month, format: "%b %Y")
+  end
+
+  test "statements tab lazy frame returns matching frame content" do
+    frame_id = dom_id(@account, :statements_tab)
+
+    get account_url(@account, tab: "statements"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id}", count: 1
+    assert_select "select[name='statement_year']"
+    assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
+  end
+
+  test "statements tab filters historical coverage by year" do
+    account = Account.create!(
+      family: @user.family,
+      owner: @user,
+      name: "Historical Checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: account,
+      file: uploaded_file(filename: "historical.csv", content_type: "text/csv")
+    )
+    statement.update!(period_start_on: Date.new(2024, 2, 1), period_end_on: Date.new(2024, 2, 29))
+
+    travel_to Date.new(2026, 5, 6) do
+      get account_url(account, tab: "statements")
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2026"
+      assert_select "p", text: "May 2026"
+      assert_select "p", text: "Not expected"
+
+      get account_url(account, tab: "statements", statement_year: 2024)
+
+      assert_response :success
+      assert_select "select[name='statement_year'] option[selected='selected']", text: "2024"
+      assert_select "p", text: "Jan 2024"
+      assert_select "p", text: "Feb 2024"
+      assert_select "p", text: "Covered"
+      assert_select "p", text: "Missing"
+      assert_select "p", text: "Not expected"
+    end
+  end
+
+  test "statements tab hides upload for read only account access" do
+    sign_in users(:family_member)
+
+    get account_url(accounts(:credit_card), tab: "statements")
+
+    assert_response :success
+    assert_select "input[type=file]", count: 0
+  end
+
   test "account activity marks trade amounts as privacy-sensitive" do
     trade_entry = entries(:trade)
     expected_amount = ApplicationController.helpers.format_money(-trade_entry.amount_money)
@@ -208,6 +318,27 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     @account.reload
     assert @account.active?
+  end
+
+  test "toggle_exclude_from_reports toggles the flag on an account" do
+    assert_not @account.exclude_from_reports?
+
+    patch toggle_exclude_from_reports_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert @account.exclude_from_reports?
+
+    patch toggle_exclude_from_reports_account_url(@account)
+    assert_redirected_to accounts_path
+    @account.reload
+    assert_not @account.exclude_from_reports?
+  end
+
+  test "toggle_exclude_from_reports requires write permission" do
+    sign_in users(:family_member)
+
+    patch toggle_exclude_from_reports_account_url(accounts(:credit_card))
+    assert_redirected_to account_url(accounts(:credit_card))
   end
 
   test "select_provider shows available providers" do

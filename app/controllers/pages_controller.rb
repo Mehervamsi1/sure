@@ -1,6 +1,29 @@
 class PagesController < ApplicationController
   include Periodable
 
+  # Per-widget dashboard layout guardrails. Deterministic defaults the masonry
+  # packer reads; users may override a grow widget's height via presets.
+  #   col_span:   "single" | "full" (full spans both columns in 2-col mode)
+  #   grow:       true for charts that should fill an allotted height,
+  #               false for content-sized widgets (tables, stat grids)
+  #   min_height: floor in px
+  DASHBOARD_SECTION_LAYOUTS = {
+    # Width-toggleable but full by default: the feed is much shorter than any
+    # other single-width widget, so defaulting to half leaves a grid hole the
+    # masonry can't backfill (dense placement needs a later card short enough
+    # to fit beside it, and none is). Users who pair it manually can go half.
+    "insights_feed"      => { col_span: "full",   grow: false, min_height: 0, width_toggle: true },
+    "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
+    "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
+    "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
+    "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
+    "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
+  }.freeze
+
+  # Selectable height presets (px) for grow widgets.
+  DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
+  DEFAULT_HEIGHT_PRESET = "auto"
+
   skip_authentication only: %i[redis_configuration_error privacy terms]
   before_action :ensure_intro_guest!, only: :intro
 
@@ -23,14 +46,15 @@ class PagesController < ApplicationController
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
+    @feed_insights = Current.family.insights.visible.ordered.limit(3)
 
     @dashboard_sections = build_dashboard_sections
 
-    @breadcrumbs = [ [ "Home", root_path ], [ "Dashboard", nil ] ]
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.dashboard"), nil ] ]
   end
 
   def intro
-    @breadcrumbs = [ [ "Home", chats_path ], [ "Intro", nil ] ]
+    @breadcrumbs = [ [ t("breadcrumbs.home"), chats_path ], [ t("breadcrumbs.intro"), nil ] ]
   end
 
   def update_preferences
@@ -49,9 +73,9 @@ class PagesController < ApplicationController
       @release_notes = {
         avatar: "https://github.com/we-promise.png",
         username: "we-promise",
-        name: "Release notes unavailable",
+        name: t("pages.release_notes_unavailable.name"),
         published_at: Date.current,
-        body: "<p>Unable to fetch the latest release notes at this time. Please check back later or visit our <a href='https://github.com/we-promise/sure/releases' target='_blank'>GitHub releases page</a> directly.</p>"
+        body: t("pages.release_notes_unavailable.body_html")
       }
     end
 
@@ -78,17 +102,28 @@ class PagesController < ApplicationController
     def preferences_params
       prefs = params.require(:preferences)
       {}.tap do |permitted|
-        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections]
-        permitted["section_order"] = prefs[:section_order] if prefs[:section_order]
+        permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections].respond_to?(:to_unsafe_h)
+        permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
+        permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
       end
     end
 
     def build_dashboard_sections
       all_sections = [
         {
+          key: "insights_feed",
+          title: "pages.dashboard.insights_feed.title",
+          partial: "pages/dashboard/insights_feed",
+          layout: section_layout("insights_feed"),
+          locals: { insights: @feed_insights },
+          visible: @feed_insights.any?,
+          collapsible: true
+        },
+        {
           key: "cashflow_sankey",
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",
+          layout: section_layout("cashflow_sankey"),
           locals: { sankey_data: @cashflow_sankey_data, period: @period },
           visible: @accounts.any?,
           collapsible: true
@@ -97,6 +132,7 @@ class PagesController < ApplicationController
           key: "outflows_donut",
           title: "pages.dashboard.outflows_donut.title",
           partial: "pages/dashboard/outflows_donut",
+          layout: section_layout("outflows_donut"),
           locals: { outflows_data: @outflows_data, period: @period },
           visible: @accounts.any? && @outflows_data[:categories].present?,
           collapsible: true
@@ -105,6 +141,7 @@ class PagesController < ApplicationController
           key: "investment_summary",
           title: "pages.dashboard.investment_summary.title",
           partial: "pages/dashboard/investment_summary",
+          layout: section_layout("investment_summary"),
           locals: { investment_statement: @investment_statement, period: @period },
           visible: @accounts.any? && @investment_statement.investment_accounts.any?,
           collapsible: true
@@ -113,6 +150,7 @@ class PagesController < ApplicationController
           key: "net_worth_chart",
           title: "pages.dashboard.net_worth_chart.title",
           partial: "pages/dashboard/net_worth_chart",
+          layout: section_layout("net_worth_chart"),
           locals: { balance_sheet: @balance_sheet, period: @period },
           visible: @accounts.any?,
           collapsible: true
@@ -121,6 +159,7 @@ class PagesController < ApplicationController
           key: "balance_sheet",
           title: "pages.dashboard.balance_sheet.title",
           partial: "pages/dashboard/balance_sheet",
+          layout: section_layout("balance_sheet"),
           locals: { balance_sheet: @balance_sheet },
           visible: @accounts.any?,
           collapsible: true
@@ -133,12 +172,37 @@ class PagesController < ApplicationController
         all_sections.find { |s| s[:key] == key }
       end.compact
 
-      # Add any new sections that aren't in the saved order (future-proofing)
+      # Add any new sections that aren't in the saved order (future-proofing).
+      # The insights feed leads instead of appending: it's a proactive surface,
+      # and appending would bury it below the fold for every family with a
+      # saved order. Users can still drag it back down — that choice persists.
       all_sections.each do |section|
-        ordered_sections << section unless ordered_sections.include?(section)
+        next if ordered_sections.include?(section)
+
+        if section[:key] == "insights_feed"
+          ordered_sections.unshift(section)
+        else
+          ordered_sections << section
+        end
       end
 
       ordered_sections
+    end
+
+    # Resolves a section's layout guardrails, applying the user's height preset
+    # override (falling back to the deterministic default) for grow widgets.
+    def section_layout(key)
+      base = DASHBOARD_SECTION_LAYOUTS.fetch(key, { col_span: "single", grow: false, min_height: 0, width_toggle: false })
+      preset = Current.user.dashboard_section_height(key)
+      preset = DEFAULT_HEIGHT_PRESET unless DASHBOARD_HEIGHT_PRESETS.key?(preset)
+
+      col_span = base[:col_span]
+      if base[:width_toggle]
+        user_span = Current.user.dashboard_section_width(key)
+        col_span = user_span if %w[single full].include?(user_span)
+      end
+
+      base.merge(col_span: col_span, height_preset: preset, height_px: DASHBOARD_HEIGHT_PRESETS.fetch(preset))
     end
 
     def github_provider
@@ -152,7 +216,7 @@ class PagesController < ApplicationController
 
       add_node = ->(unique_key, display_name, value, percentage, color) {
         node_indices[unique_key] ||= begin
-          nodes << { name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          nodes << { id: unique_key, name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
           nodes.size - 1
         end
       }
