@@ -73,7 +73,9 @@ Sidekiq.configure_server do |config|
 end
 
 Sidekiq.configure_client do |config|
-  config.redis = redis_config
+  # Small pool: web only enqueues jobs; keeps total Redis clients within
+  # managed-Redis connection limits (free tiers allow ~30).
+  config.redis = redis_config.merge(size: 2)
 end
 
 Sidekiq::Cron.configure do |config|
