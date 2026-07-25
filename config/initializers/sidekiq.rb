@@ -61,7 +61,9 @@ else
 end
 
 Sidekiq.configure_server do |config|
-  config.redis = redis_config
+  # Internal pool defaults to 10 connections, which alone is a third of a
+  # managed-Redis free-tier client cap. A single-user instance needs far less.
+  config.redis = redis_config.merge(size: Integer(ENV.fetch("SIDEKIQ_REDIS_POOL", 3)))
 
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do
