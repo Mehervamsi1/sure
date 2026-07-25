@@ -43,10 +43,16 @@
         <%= form.hidden_field :account_id, value: account.id %>
         <div>
           <%= form.label :files, t("account_statements.form.files_label"), class: "form-field__label" %>
+          <%# turbo_permanent keeps the chosen FileList alive when this tab re-renders
+              (year filter auto-submit / Turbo stream refresh), which otherwise silently
+              cleared the selection and posted files: [""]. %>
           <%= form.file_field :files,
                               multiple: true,
                               accept: AccountStatement::ACCEPTED_FILE_EXTENSIONS.join(","),
-                              class: "form-field__input" %>
+                              class: "form-field__input",
+                              id: "account_statement_files_for_account",
+                              required: true,
+                              data: { turbo_permanent: true } %>
           <p class="text-xs text-secondary mt-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
         </div>
         <%= form.submit t("account_statements.form.account_upload") %>
