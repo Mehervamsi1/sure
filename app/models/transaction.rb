@@ -6,13 +6,9 @@ class Transaction < ApplicationRecord
   belongs_to :transfer, optional: true
 
   # Virtual field backing the "Parent" half of the dependent category selects.
-  # A top-level category is a complete choice on its own, so when the form posts
-  # a parent with no subcategory we persist the parent as the category. Kept as
-  # a plain accessor (no column) and resolved through the family so a forged id
-  # from another family is ignored rather than assigned.
+  # Holds the choice across form re-renders; the controller resolves it into
+  # category_id (family-scoped) when no subcategory was picked.
   attr_accessor :category_parent_id
-
-  before_validation :apply_category_parent_fallback
 
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
@@ -359,18 +355,6 @@ class Transaction < ApplicationRecord
   end
 
   private
-
-    # No subcategory picked => the selected parent *is* the category. Resolved
-    # through the owning family so an id from another family is ignored.
-    def apply_category_parent_fallback
-      return if category_parent_id.blank?
-      return if category_id.present?
-
-      family = entry&.account&.family
-      return if family.nil?
-
-      self.category_id = family.categories.where(id: category_parent_id).pick(:id)
-    end
 
     def validate_attachments
       # Check attachment count limit

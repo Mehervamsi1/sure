@@ -1,4 +1,4 @@
-<%# locals: (ef:, categories:)
+<%# locals: (ef:, categories:, disabled: false, auto_submit: false)
 
   Dependent Parent -> Child category selects.
 
@@ -22,6 +22,8 @@
 <% selected_parent_id = selected_category&.parent_id || selected_category&.id %>
 <% selected_child_id = selected_category&.parent_id ? selected_category.id : nil %>
 <% cascade_map = children_by_parent.transform_values { |children| children.map(&:id) } %>
+<% disabled = local_assigns.fetch(:disabled, false) %>
+<% select_data = local_assigns.fetch(:auto_submit, false) ? { "auto-submit-form-target": "auto" } : {} %>
 
 <div data-controller="category-cascade"
      data-category-cascade-map-value="<%= cascade_map.to_json %>"
@@ -35,7 +37,9 @@
                                label: t("transactions.form.category_parent"),
                                selected: selected_parent_id,
                                variant: :badge,
-                               searchable: true } %>
+                               searchable: true,
+                               disabled: disabled },
+                             **select_data %>
   </div>
 
   <div data-category-cascade-target="child">
@@ -48,6 +52,8 @@
                                selected: selected_child_id,
                                include_blank: t("transactions.form.category_child_none"),
                                variant: :badge,
-                               searchable: true } %>
+                               searchable: true,
+                               disabled: disabled },
+                             **select_data %>
   </div>
 </div>

@@ -79,7 +79,7 @@ class TransactionsParentChildCategoryTest < ActionDispatch::IntegrationTest
   test "prefills parent and child when editing a transaction on a subcategory" do
     @entry.entryable.update!(category: @child)
 
-    get edit_transaction_url(@entry)
+    get transaction_url(@entry)
 
     assert_response :success
     assert_select "input[name='entry[entryable_attributes][category_parent_id]'][value=?]", @parent.id
@@ -89,7 +89,7 @@ class TransactionsParentChildCategoryTest < ActionDispatch::IntegrationTest
   test "prefills parent only when editing a transaction on a top-level category" do
     @entry.entryable.update!(category: @parent)
 
-    get edit_transaction_url(@entry)
+    get transaction_url(@entry)
 
     assert_response :success
     assert_select "input[name='entry[entryable_attributes][category_parent_id]'][value=?]", @parent.id
