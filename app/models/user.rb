@@ -392,7 +392,11 @@ class User < ApplicationRecord
   end
 
   def preview_features_enabled?
-    preferences&.dig("preview_features_enabled") == true
+    pref = preferences&.dig("preview_features_enabled")
+    # Self-hosted instances are single-tenant and opt in by running the fork at
+    # all; default preview features ON there unless explicitly disabled.
+    return pref != false if Rails.application.config.app_mode.self_hosted?
+    pref == true
   end
 
   def update_transactions_preferences(prefs)
@@ -502,7 +506,7 @@ class User < ApplicationRecord
     end
 
     def totp
-      ROTP::TOTP.new(otp_secret, issuer: "Sure Finances")
+      ROTP::TOTP.new(otp_secret, issuer: ENV.fetch("PRODUCT_NAME", "Findance"))
     end
 
     def consume_backup_code!(normalized_code)

@@ -8,7 +8,7 @@
   <% dialog.with_body do %>
     <div class="space-y-4">
       <p class="text-sm text-secondary">
-        <%= t("snaptrade_items.oauth_device_flow.subtitle", default: "Authorize Sure from SnapTrade") %>
+        <%= t("snaptrade_items.oauth_device_flow.subtitle", default: "Authorize #{product_name} from SnapTrade") %>
       </p>
 
       <% if @error_message.present? %>

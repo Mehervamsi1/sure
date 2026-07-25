@@ -39,7 +39,7 @@
           <% if oauth_active %>
             <%= t("providers.snaptrade.oauth_status_authorized", default: "Authorized for SnapTrade.") %>
           <% else %>
-            <%= t("providers.snaptrade.oauth_status_ready", default: "Use a device code to authorize Sure for SnapTrade.") %>
+            <%= t("providers.snaptrade.oauth_status_ready", default: "Use a device code to authorize #{product_name} for SnapTrade.") %>
           <% end %>
         </p>
       </div>

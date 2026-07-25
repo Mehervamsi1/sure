@@ -326,7 +326,7 @@ class Import::Preflight
         status: :unprocessable_entity,
         payload: {
           error: "missing_content",
-          message: "Provide a Sure NDJSON file or raw_file_content."
+          message: "Provide a Findance NDJSON file or raw_file_content."
         }
       )
     end
@@ -386,7 +386,7 @@ class Import::Preflight
         status: :unprocessable_entity,
         payload: {
           error: "invalid_file_type",
-          message: "Invalid file type. Please upload a Sure NDJSON file."
+          message: "Invalid file type. Please upload a Findance NDJSON file."
         }
       )
     end
