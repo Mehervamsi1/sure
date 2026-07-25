@@ -1,0 +1,59 @@
+<%# locals: (ef:, categories:, disabled: false, auto_submit: false)
+
+  Dependent Parent -> Child category selects.
+
+  `categories` is already family-scoped by the controller. Parents are the roots
+  (parent_id IS NULL); a root on its own is a complete, valid category, so the
+  child select is always optional.
+
+  Both selects render every option up front and the parent -> children map is
+  embedded as a data attribute, so narrowing the child list is pure client-side
+  work in category_cascade_controller (no route, no round trip).
+
+  Field wiring:
+    parent -> transaction.category_parent_id (virtual; kept so the choice survives
+              a re-render after validation errors, and so the server can fall back
+              to the parent when no child is picked)
+    child  -> transaction.category_id (the real column that gets persisted)
+%>
+<% parents = categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.to_s.downcase } %>
+<% children_by_parent = categories.reject { |category| category.parent_id.nil? }.group_by(&:parent_id) %>
+<% selected_category = categories.find { |category| category.id == ef.object&.category_id } %>
+<% selected_parent_id = selected_category&.parent_id || selected_category&.id %>
+<% selected_child_id = selected_category&.parent_id ? selected_category.id : nil %>
+<% cascade_map = children_by_parent.transform_values { |children| children.map(&:id) } %>
+<% disabled = local_assigns.fetch(:disabled, false) %>
+<% select_data = local_assigns.fetch(:auto_submit, false) ? { "auto-submit-form-target": "auto" } : {} %>
+
+<div data-controller="category-cascade"
+     data-category-cascade-map-value="<%= cascade_map.to_json %>"
+     class="space-y-2">
+  <div data-category-cascade-target="parent">
+    <%= ef.collection_select :category_parent_id,
+                             parents,
+                             :id,
+                             :name,
+                             { prompt: t("transactions.form.category_parent_prompt"),
+                               label: t("transactions.form.category_parent"),
+                               selected: selected_parent_id,
+                               variant: :badge,
+                               searchable: true,
+                               disabled: disabled },
+                             **select_data %>
+  </div>
+
+  <div data-category-cascade-target="child">
+    <%= ef.collection_select :category_id,
+                             children_by_parent.values.flatten.sort_by { |category| category.name.to_s.downcase },
+                             :id,
+                             :name,
+                             { prompt: t("transactions.form.category_child_none"),
+                               label: t("transactions.form.category_child"),
+                               selected: selected_child_id,
+                               include_blank: t("transactions.form.category_child_none"),
+                               variant: :badge,
+                               searchable: true,
+                               disabled: disabled },
+                             **select_data %>
+  </div>
+</div>

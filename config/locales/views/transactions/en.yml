@@ -30,7 +30,12 @@ en:
       account_prompt: Select an Account
       amount: Amount
       category: Category
+      category_child: Subcategory
+      category_child_none: "— None —"
+      category_child_prompt: Select a Subcategory
       category_label: Category
+      category_parent: Category
+      category_parent_prompt: Select a Category
       category_prompt: Select a Category
       date: Date
       description: Description

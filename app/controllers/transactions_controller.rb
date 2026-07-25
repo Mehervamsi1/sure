@@ -461,11 +461,28 @@ class TransactionsController < ApplicationController
       transaction.eligible_for_category_rule?
     end
 
+    # The category form posts a Parent and an optional Subcategory. A top-level
+    # category is a complete choice on its own, so when no subcategory is picked
+    # the parent becomes the persisted category. Resolved against Current.family
+    # so an id from another family is dropped rather than assigned.
+    def resolve_category_parent(entry_params)
+      entryable = entry_params[:entryable_attributes]
+      return entry_params if entryable.blank?
+
+      parent_id = entryable.delete(:category_parent_id)
+      return entry_params if parent_id.blank? || entryable[:category_id].present?
+
+      entryable[:category_id] = Current.family.categories.where(id: parent_id).pick(:id)
+      entry_params
+    end
+
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :category_parent_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
+
+      entry_params = resolve_category_parent(entry_params)
 
       nature = entry_params.delete(:nature)
 
@@ -514,7 +531,7 @@ class TransactionsController < ApplicationController
         # Annotate only: category, tags, merchant, notes
         ep = entry_params.slice(:notes)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :category_parent_id, :merchant_id, :tag_ids)
         end
         ep
       else

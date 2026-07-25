@@ -5,6 +5,11 @@ class Transaction < ApplicationRecord
   belongs_to :merchant, optional: true
   belongs_to :transfer, optional: true
 
+  # Virtual field backing the "Parent" half of the dependent category selects.
+  # Holds the choice across form re-renders; the controller resolves it into
+  # category_id (family-scoped) when no subcategory was picked.
+  attr_accessor :category_parent_id
+
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
