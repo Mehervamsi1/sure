@@ -87,7 +87,13 @@ class ExpenseContainersControllerTest < ActionDispatch::IntegrationTest
     other_family = families(:empty)
     foreign = other_family.expense_containers.create!(name: "Not Mine", currency: other_family.currency)
 
-    assert_raises(ActiveRecord::RecordNotFound) { get expense_container_url(foreign) }
+    get expense_container_url(foreign)
+
+    # The app rescues RecordNotFound into a 404/redirect rather than raising,
+    # so assert on the outcome: never rendered, never leaked.
+    assert_not_equal 200, response.status,
+      "another family's container must not render"
+    refute_match "Not Mine", response.body
   end
 
   test "target progress reports over budget" do
