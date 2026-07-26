@@ -1,0 +1,52 @@
+---
+en:
+  expense_containers:
+    index:
+      title: Containers
+      subtitle: Group spend that belongs to one effort — a trip, a renovation, a project.
+      new: New container
+      empty: No containers yet
+      empty_description: Create a container to gather related expenses in one place.
+      active: Active
+      archived: Archived
+      spent: Spent
+      target: Target
+      remaining: Remaining
+      transactions: Transactions
+    show:
+      spent: Spent
+      target: Target
+      remaining: Remaining
+      over_budget: Over target
+      no_target: No target set
+      transactions_title: Expenses in this container
+      empty: Nothing filed here yet
+      empty_description: Pick this container on a transaction to gather it here.
+      edit: Edit
+      archive: Archive
+      activate: Reactivate
+    new:
+      title: New container
+    edit:
+      title: Edit container
+    form:
+      name: Name
+      name_placeholder: e.g. Goa trip, Kitchen renovation
+      description: Description
+      description_placeholder: Optional notes about this container
+      target_amount: Target amount
+      target_amount_help: Optional. Leave blank to just track the total.
+      starts_on: Starts on
+      ends_on: Ends on
+      color: Colour
+      submit: Save container
+    create:
+      created: Container created
+    update:
+      updated: Container updated
+    destroy:
+      destroyed: Container deleted. Its transactions were kept and unfiled.
+    archive:
+      archived: Container archived
+    activate:
+      activated: Container reactivated

@@ -1,0 +1,47 @@
+<div class="space-y-4">
+  <div class="flex items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-medium text-primary"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".subtitle") %></p>
+    </div>
+    <%= link_to t(".new"), new_expense_container_path,
+                class: "btn btn--primary", data: { turbo_frame: "modal" } %>
+  </div>
+
+  <% if @containers.empty? %>
+    <div class="text-center py-12 space-y-1">
+      <p class="text-sm font-medium text-primary"><%= t(".empty") %></p>
+      <p class="text-sm text-secondary"><%= t(".empty_description") %></p>
+    </div>
+  <% else %>
+    <% [ [ t(".active"), @active_containers ], [ t(".archived"), @archived_containers ] ].each do |label, list| %>
+      <% next if list.empty? %>
+      <p class="text-xs uppercase tracking-wide text-secondary mt-4"><%= label %></p>
+      <div class="bg-container rounded-xl divide-y divide-alpha-black-100">
+        <% list.each do |container| %>
+          <%= link_to expense_container_path(container), class: "flex items-center justify-between gap-3 p-4 hover:bg-container-hover" do %>
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= container.color || "#737373" %>"></span>
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-primary truncate"><%= container.name %></p>
+                <p class="text-xs text-secondary">
+                  <%= t(".transactions") %>: <%= container.transactions_count %>
+                </p>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <p class="text-sm font-medium text-primary">
+                <%= Money.new(container.total_spent, container.currency).format %>
+              </p>
+              <% if container.target_amount.present? %>
+                <p class="text-xs <%= container.over_budget? ? "text-destructive" : "text-secondary" %>">
+                  <%= t(".target") %>: <%= Money.new(container.target_amount, container.currency).format %>
+                </p>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

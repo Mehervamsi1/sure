@@ -1,4 +1,4 @@
-<%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:) %>
+<%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:, expense_containers: []) %>
 
 <%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
   <% if entry.errors.any? %>
@@ -30,6 +30,20 @@
 
     <%= f.fields_for :entryable do |ef| %>
       <%= render "transactions/category_fields", ef: ef, categories: categories %>
+
+      <%# Optional: file this spend under a container (a trip, a project). The
+          transaction still shows in the normal list; the container is an extra lens. %>
+      <% if expense_containers.any? %>
+        <%= ef.collection_select :expense_container_id,
+                                 expense_containers,
+                                 :id,
+                                 :name,
+                                 { prompt: t(".expense_container_prompt"),
+                                   label: t(".expense_container"),
+                                   include_blank: t(".expense_container_none"),
+                                   variant: :badge,
+                                   searchable: true } %>
+      <% end %>
     <% end %>
 
     <%= f.date_field :date,

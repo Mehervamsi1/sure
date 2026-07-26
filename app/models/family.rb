@@ -43,6 +43,7 @@ class Family < ApplicationRecord
   has_many :holdings, through: :accounts
 
   has_many :tags, dependent: :destroy
+  has_many :expense_containers, dependent: :destroy
   has_many :categories, dependent: :destroy
   has_many :merchants, dependent: :destroy, class_name: "FamilyMerchant"
 

@@ -338,6 +338,13 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  resources :expense_containers do
+    member do
+      patch :archive
+      patch :activate
+    end
+  end
+
   namespace :category do
     resource :dropdown, only: :show
   end

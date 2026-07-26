@@ -1,0 +1,19 @@
+<%= styled_form_with model: container, class: "space-y-4" do |f| %>
+  <% if container.errors.any? %>
+    <%= render "shared/form_errors", model: container %>
+  <% end %>
+
+  <%= f.text_field :name, label: t(".name"), placeholder: t(".name_placeholder"), required: true %>
+  <%= f.text_area :description, label: t(".description"), placeholder: t(".description_placeholder"), rows: 3 %>
+  <%= f.number_field :target_amount, label: t(".target_amount"), step: "0.01", min: "0", placeholder: "0.00" %>
+  <p class="text-xs text-secondary"><%= t(".target_amount_help") %></p>
+
+  <div class="grid grid-cols-2 gap-3">
+    <%= f.date_field :starts_on, label: t(".starts_on") %>
+    <%= f.date_field :ends_on, label: t(".ends_on") %>
+  </div>
+
+  <%= f.select :color, ExpenseContainer::COLORS.map { |c| [ c, c ] }, { label: t(".color") } %>
+
+  <%= f.submit t(".submit") %>
+<% end %>

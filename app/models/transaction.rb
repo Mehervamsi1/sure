@@ -4,6 +4,9 @@ class Transaction < ApplicationRecord
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
   belongs_to :transfer, optional: true
+  # At most one container per transaction, so a container's total is
+  # unambiguous. Split a shared payment to file its parts separately.
+  belongs_to :expense_container, optional: true
 
   # Virtual field backing the "Parent" half of the dependent category selects.
   # Holds the choice across form re-renders; the controller resolves it into

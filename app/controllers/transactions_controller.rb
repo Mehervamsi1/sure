@@ -479,7 +479,7 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
-        entryable_attributes: [ :id, :category_id, :category_parent_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
+        entryable_attributes: [ :id, :category_id, :category_parent_id, :expense_container_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 
       entry_params = resolve_category_parent(entry_params)
@@ -516,6 +516,7 @@ class TransactionsController < ApplicationController
         .includes(:account_providers, logo_attachment: :blob)
         .to_a
       @categories = Current.family.categories.alphabetically.to_a
+      @expense_containers = Current.family.expense_containers.active.alphabetically.to_a
       @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
     end
@@ -531,7 +532,7 @@ class TransactionsController < ApplicationController
         # Annotate only: category, tags, merchant, notes
         ep = entry_params.slice(:notes)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :category_parent_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :category_parent_id, :expense_container_id, :merchant_id, :tag_ids)
         end
         ep
       else

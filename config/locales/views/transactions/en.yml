@@ -37,6 +37,9 @@ en:
       category_parent: Category
       category_parent_prompt: Select a Category
       category_prompt: Select a Category
+      expense_container: Container
+      expense_container_none: "— None —"
+      expense_container_prompt: Select a Container
       date: Date
       description: Description
       description_placeholder: Describe transaction
