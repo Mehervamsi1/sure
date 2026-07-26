@@ -6,7 +6,10 @@ class ExpenseContainersController < ApplicationController
     @active_containers = @containers.select(&:active?)
     @archived_containers = @containers.reject(&:active?)
 
-    render layout: "settings"
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("expense_containers.index.title"), nil ]
+    ]
   end
 
   # The container lens: the same transactions that appear in the normal list,
@@ -25,8 +28,6 @@ class ExpenseContainersController < ApplicationController
       [ t("expense_containers.index.title"), expense_containers_path ],
       [ @container.name, nil ]
     ]
-
-    render layout: "settings"
   end
 
   def new

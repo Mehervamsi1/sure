@@ -10,6 +10,16 @@ class ExpenseContainersControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  # Containers shipped without a nav entry once already: routes and views
+  # existed but the feature was only reachable by typing the URL.
+  test "containers are reachable from the main navigation" do
+    get root_url
+
+    assert_response :success
+    assert_select "a[href=?]", expense_containers_path, { minimum: 1 },
+      "Containers must appear in the sidebar nav"
+  end
+
   test "index lists containers" do
     get expense_containers_url
 
