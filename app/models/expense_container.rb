@@ -4,6 +4,14 @@ class ExpenseContainer < ApplicationRecord
 
   STATUSES = %w[active archived].freeze
   COLORS = Tag::COLORS
+  DEFAULT_COLOR = COLORS.first
+  DEFAULT_ICON = "package"
+
+  # Containers describe efforts (a trip, a renovation, a wedding), so the icon
+  # set is the same one categories draw from.
+  def self.icon_codes
+    Category.icon_codes
+  end
 
   validates :name, presence: true, uniqueness: { scope: :family }
   validates :currency, presence: true
@@ -51,6 +59,14 @@ class ExpenseContainer < ApplicationRecord
 
   def active?
     status == "active"
+  end
+
+  def display_color
+    color.presence || DEFAULT_COLOR
+  end
+
+  def display_icon
+    lucide_icon.presence || DEFAULT_ICON
   end
 
   def archive!

@@ -2,7 +2,10 @@
   <div class="flex items-start justify-between gap-3">
     <div class="min-w-0">
       <div class="flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= @container.color || "#737373" %>"></span>
+        <span class="w-9 h-9 flex items-center justify-center rounded-full shrink-0"
+              style="background-color: color-mix(in oklab, <%= @container.display_color %> 12%, transparent); color: <%= @container.display_color %>">
+          <%= icon(@container.display_icon, size: "sm", color: "current") %>
+        </span>
         <h1 class="text-xl font-medium text-primary truncate"><%= @container.name %></h1>
       </div>
       <% if @container.description.present? %>

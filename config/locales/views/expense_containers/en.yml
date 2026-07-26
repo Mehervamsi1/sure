@@ -39,6 +39,7 @@ en:
       starts_on: Starts on
       ends_on: Ends on
       color: Colour
+      icon: Icon
       submit: Save container
     create:
       created: Container created

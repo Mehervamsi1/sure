@@ -4,8 +4,13 @@
       <h1 class="text-xl font-medium text-primary"><%= t(".title") %></h1>
       <p class="text-sm text-secondary"><%= t(".subtitle") %></p>
     </div>
-    <%= link_to t(".new"), new_expense_container_path,
-                class: "btn btn--primary", data: { turbo_frame: "modal" } %>
+    <%= render DS::Link.new(
+          text: t(".new"),
+          icon: "plus",
+          variant: "primary",
+          href: new_expense_container_path,
+          frame: :modal
+        ) %>
   </div>
 
   <% if @containers.empty? %>
@@ -21,7 +26,10 @@
         <% list.each do |container| %>
           <%= link_to expense_container_path(container), class: "flex items-center justify-between gap-3 p-4 hover:bg-container-hover" do %>
             <div class="flex items-center gap-3 min-w-0">
-              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= container.color || "#737373" %>"></span>
+              <span class="w-9 h-9 flex items-center justify-center rounded-full shrink-0"
+                    style="background-color: color-mix(in oklab, <%= container.display_color %> 12%, transparent); color: <%= container.display_color %>">
+                <%= icon(container.display_icon, size: "sm", color: "current") %>
+              </span>
               <div class="min-w-0">
                 <p class="text-sm font-medium text-primary truncate"><%= container.name %></p>
                 <p class="text-xs text-secondary">
