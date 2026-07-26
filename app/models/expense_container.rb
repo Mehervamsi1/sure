@@ -20,10 +20,13 @@ class ExpenseContainer < ApplicationRecord
   # project). Transactions still appear in the normal list; the container is an
   # additional lens, not a filter that hides them.
   #
-  # Outflows are stored positive and inflows negative (see Entry), so spend is
-  # the sum of positive amounts and refunds net against it.
+  # Measured the same way the rest of the app measures spend: outflows are
+  # positive and inflows negative, transfers / credit-card payments / one-offs
+  # are not spending (Transaction::BUDGET_EXCLUDED_KINDS), and entries the user
+  # marked excluded are ignored. Refunds inside the container still net off,
+  # which is what you want for "what did this trip cost me".
   def total_spent
-    entries.sum(:amount)
+    spendable_entries.sum(:amount)
   end
 
   def transactions_count
@@ -62,6 +65,12 @@ class ExpenseContainer < ApplicationRecord
 
     def entries
       Entry.where(entryable_type: "Transaction", entryable_id: transactions.select(:id))
+    end
+
+    def spendable_entries
+      entries
+        .where(excluded: false)
+        .where(entryable_id: transactions.where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS).select(:id))
     end
 
     def ends_on_after_starts_on

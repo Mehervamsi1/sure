@@ -96,6 +96,20 @@ class ExpenseContainersControllerTest < ActionDispatch::IntegrationTest
     refute_match "Not Mine", response.body
   end
 
+  test "transfers and excluded entries do not count as container spend" do
+    transfer = @entry.entryable
+    transfer.update!(expense_container: @container, kind: "funds_movement")
+
+    assert_equal 0, @container.reload.total_spent,
+      "a transfer between your own accounts is not spend"
+
+    transfer.update!(kind: "standard")
+    @entry.update!(excluded: true)
+
+    assert_equal 0, @container.reload.total_spent,
+      "entries the user excluded must not count"
+  end
+
   test "target progress reports over budget" do
     @container.update!(target_amount: 1)
     @entry.entryable.update!(expense_container: @container)
