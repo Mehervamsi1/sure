@@ -1,5 +1,10 @@
 # Sure Helm Chart
 
+> **Findance note.** This is upstream Sure's Kubernetes chart, kept unmodified so it merges
+> cleanly from upstream. Findance itself deploys on Railway (see
+> [docs/FINDANCE_MENTAL_MODEL.md](../../docs/FINDANCE_MENTAL_MODEL.md) §3–4), not Kubernetes,
+> and this chart pulls upstream `ghcr.io/we-promise/sure` images rather than Findance builds.
+
 Official Helm chart for deploying the Sure Rails application on Kubernetes. It supports web (Rails) and worker (Sidekiq) workloads, optional in-cluster PostgreSQL (CloudNativePG) and Redis subcharts for turnkey self-hosting, and production-grade features like pre-upgrade migrations, pod security contexts, HPAs, and optional ServiceMonitor.
 
 ## Features

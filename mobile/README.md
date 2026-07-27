@@ -1,12 +1,14 @@
-# Sure Mobile
+# Findance Mobile
 
-A Flutter mobile application for [Sure](https://github.com/we-promise/sure) personal finance management system. This is the mobile client that connects to the Sure backend server.
+A Flutter mobile application for Findance, a personal finance management system. This is the mobile client that connects to a Findance backend server.
+
+> Findance is a fork of [Sure](https://github.com/we-promise/sure); the API this client speaks is upstream's.
 
 ## About
 
-This app is a mobile companion to the [Sure personal finance management system](https://github.com/we-promise/sure). It provides basic functionality to:
+This app is a mobile companion to the Findance personal finance management system. It provides basic functionality to:
 
-- **Login** - Authenticate with your Sure Finances server
+- **Login** - Authenticate with your Findance server
 - **View Balance** - See all your accounts and their balances
 
 For more detailed technical documentation, see [docs/TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md).
@@ -54,7 +56,7 @@ This step generates the app icons for all platforms based on the source icon in 
 
 ### 4. Configure API Endpoint
 
-Edit `lib/services/api_config.dart` to point to your Sure Finances server:
+Edit `lib/services/api_config.dart` to point to your Findance server:
 
 ```dart
 // For local development with Android emulator
@@ -64,7 +66,7 @@ static String _baseUrl = 'http://10.0.2.2:3000';
 static String _baseUrl = 'http://localhost:3000';
 
 // For production
-static String _baseUrl = 'https://your-sure-server.com';
+static String _baseUrl = 'https://findance.app';
 ```
 
 ### 5. Run the App
@@ -113,7 +115,7 @@ flutter run -d chrome
 
 ## API Integration
 
-This app integrates with the Sure Finances Rails API:
+This app integrates with the Findance Rails API:
 
 ### Authentication
 - `POST /api/v1/auth/login` - User authentication

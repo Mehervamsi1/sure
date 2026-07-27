@@ -9,6 +9,14 @@ Findance is a self-hosted personal-finance tracker — accounts, transactions, b
 >
 > Under the AGPLv3, if this application is made available to users over a network, those users are entitled to the complete corresponding source code, including any modifications.
 
+## Understanding the system
+
+**New here, or coming back after a while? Read
+[docs/FINDANCE_MENTAL_MODEL.md](docs/FINDANCE_MENTAL_MODEL.md).** It explains the whole
+application end to end: the domain model (families, accounts, entries, balances), the sign
+convention that all the money maths depends on, how the sync engine and Turbo interact,
+the deployment topology, and the gotchas that have already cost real debugging time.
+
 ## Backstory
 
 The [Maybe Finance](https://github.com/maybe-finance/maybe) (archived/abandoned repo) team spent most of 2021–2022 building a full-featured personal finance and wealth management app. It even included an “Ask an Advisor” feature that connected users with a real CFP/CFA — all included with your subscription.
@@ -27,23 +35,34 @@ Join us!
 
 Findance is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
 
+## What Findance adds on top of Sure
+
+Findance is intentionally a **thin layer** over upstream Sure, so upstream changes stay cheap
+to merge:
+
+| Area | Change |
+|---|---|
+| Brand | Token overlay (`findance-tokens.css`), coin-edge logomark, Cormorant Garamond + Instrument Sans, full asset set in [`brand/`](brand/) |
+| Categories | Dependent Parent → Subcategory selects on the transaction form |
+| Containers | `ExpenseContainer` — group spend for one effort (a trip, a renovation) across categories |
+| Security | Session cookies and auth headers redacted from logs |
+| Reliability | Redis connection pools sized for managed-Redis client limits |
+
+Everything else is upstream. When adding a feature, prefer upstream's existing pattern over
+inventing a parallel one.
+
 ## Forking and Attribution
 
-This repo is a community fork of the archived Maybe Finance repo.
-You’re free to fork it under the AGPLv3 license — but we’d love it if you stuck around and contributed here instead.
+Findance is a fork of [Sure](https://github.com/we-promise/sure), the community continuation
+of the archived Maybe Finance repo. You are free to fork it under the AGPLv3.
 
 To stay compliant and avoid trademark issues:
 
-- Be sure to include the original [AGPLv3 license](https://github.com/maybe-finance/maybe/blob/main/LICENSE) and clearly state in your README that your fork is based on Maybe Finance but is **not affiliated with or endorsed by** Maybe Finance Inc.
-- "Maybe" is a trademark of Maybe Finance Inc. and therefore, use of it is NOT allowed in forked repositories (or the logo)
-
-## Performance Issues
-
-With data-heavy apps, inevitably, there are performance issues. We've set up a public dashboard showing the problematic requests seen on the demo site, along with the stacktraces to help debug them.
-
-[https://www.skylight.io/app/applications/s6PEZSKwcklL/recent/6h/endpoints](https://oss.skylight.io/app/applications/s6PEZSKwcklL/recent/6h/endpoints)
-
-Any contributions that help improve performance are very much welcome.
+- Keep the [AGPLv3 license](LICENSE) and state clearly that your fork is based on Maybe
+  Finance / Sure but is **not affiliated with or endorsed by** either.
+- "Maybe" is a trademark of Maybe Finance Inc. — its name and logo must not be used in forks.
+- AGPLv3 is a *network* licence: if you run this where other people can reach it, they are
+  entitled to the complete corresponding source, including your changes.
 
 ## Local Development Setup
 
@@ -59,7 +78,7 @@ The instructions below are for developers to get started with contributing to th
 
 ### Getting Started
 ```sh
-cd sure
+cd findance
 cp .env.local.example .env.local
 bin/setup
 bin/dev

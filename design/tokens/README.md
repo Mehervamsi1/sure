@@ -1,6 +1,12 @@
-# Sure design tokens
+# Design tokens
 
-This is where the design system actually lives. Tailwind reads from here, and any external tooling (Figma Tokens Studio, AI design tools, anything that shows up later) is meant to read the same JSON.
+This is where the upstream design system actually lives.
+
+> **Findance note.** These are upstream Sure's tokens. Findance does **not** edit them — the
+> brand is layered on top in `app/assets/tailwind/findance-tokens.css`, which is imported
+> after the generated stylesheet and overrides the values. Keeping this file untouched is what
+> makes upstream merges cheap. Brand assets live in [`brand/`](../../brand/).
+ Tailwind reads from here, and any external tooling (Figma Tokens Studio, AI design tools, anything that shows up later) is meant to read the same JSON.
 
 ## Files
 
