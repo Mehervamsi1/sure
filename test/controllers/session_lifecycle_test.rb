@@ -53,7 +53,7 @@ class SessionLifecycleTest < ActionDispatch::IntegrationTest
   end
 
   test "logging in rotates the session and issues a scoped cookie" do
-    post sessions_url, params: { email: @user.email, password: user_password_test_helper }
+    post sessions_url, params: { email: @user.email, password: user_password_test }
 
     session_record = Session.order(:created_at).last
     assert_not_nil session_record
@@ -61,30 +61,26 @@ class SessionLifecycleTest < ActionDispatch::IntegrationTest
     cookie = response.cookies["session_token"]
     assert_not_nil cookie, "login must set the session cookie"
 
-    set_cookie_header = response.headers["Set-Cookie"].to_s
-    assert_match(/session_token/, set_cookie_header)
-    assert_match(/httponly/i, set_cookie_header)
-    assert_match(/samesite=lax/i, set_cookie_header)
-    assert_no_match(/expires=[^;]*20\d\d/i, set_cookie_header.split("session_token").last.to_s[0, 0])
+    session_cookie_header = Array(response.headers["Set-Cookie"]).flat_map { |h| h.to_s.split("
+") }
+                                 .find { |h| h.start_with?("session_token=") }
+    assert_not_nil session_cookie_header, "session_token must be set with explicit attributes"
+    assert_match(/httponly/i, session_cookie_header)
+    assert_match(/samesite=lax/i, session_cookie_header)
+    assert_match(/expires=/i, session_cookie_header,
+      "the cookie must carry an expiry rather than being permanent")
   end
 
   test "signing in twice creates a distinct session record" do
-    post sessions_url, params: { email: @user.email, password: user_password_test_helper }
+    post sessions_url, params: { email: @user.email, password: user_password_test }
     first = Session.order(:created_at).last
 
     delete session_url(first)
 
-    post sessions_url, params: { email: @user.email, password: user_password_test_helper }
+    post sessions_url, params: { email: @user.email, password: user_password_test }
     second = Session.order(:created_at).last
 
     assert_not_equal first.id, second.id,
       "a fresh login must not reuse a prior session identifier"
   end
-
-  private
-
-    # The fixture password used across the suite.
-    def user_password_test_helper
-      "password"
-    end
 end
