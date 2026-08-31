@@ -43,7 +43,7 @@ finding how upstream already does it.
 
 ## 2. The stack in one paragraph
 
-Ruby on Rails 7.2 (Ruby 3.4), Postgres for all persistence, Redis for the job queue and
+Ruby on Rails 8.1 (Ruby 3.4.9), Postgres for all persistence, Redis for the job queue and
 caching, Sidekiq for background work, and **Hotwire** (Turbo + Stimulus) for the front end —
 meaning the server renders HTML and the browser swaps fragments of it, rather than a
 JavaScript app calling a JSON API. Tailwind provides styling through a design-token layer.
@@ -424,10 +424,11 @@ git revert <sha> && git push origin findance/setup
 Backups live in `B:\Projects\findance-backups\`. **Supabase's free tier has no automatic
 backups** — these manual dumps are the only copy.
 
-Tests run in the GitHub Codespace (no local Ruby):
-`bin/rails test test/controllers/...`. The container image runs Ruby 3.4.7 while the branch
-pins 3.4.9, so `.ruby-version` is patched *locally only* there; `git stash` wipes that patch
-and every `bin/rails` call then fails with `Bundler::RubyVersionMismatch`.
+Tests run in the GitHub Codespace (no local Ruby): `bin/rails test test/controllers/...`.
+A fresh Codespace needs `bundle install` and `bin/rails tailwindcss:build` before the suite
+will run — without the Tailwind build, every test that renders a layout fails with
+"asset 'tailwind.css' was not found". Codespaces are deleted after ~30 days of inactivity;
+recreate with `gh codespace create -R Mehervamsi1/sure -b <branch> -m basicLinux32gb`.
 
 ---
 

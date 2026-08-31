@@ -259,7 +259,9 @@ class UserTest < ActiveSupport::TestCase
 
     assert_match %r{otpauth://totp/}, user.provisioning_uri
     assert_match %r{secret=#{user.otp_secret}}, user.provisioning_uri
-    assert_match %r{issuer=Sure}, user.provisioning_uri
+    # The issuer is what the authenticator app labels the entry with, so it
+    # follows PRODUCT_NAME rather than being hardcoded to the upstream name.
+    assert_match %r{issuer=#{Regexp.escape(ENV.fetch('PRODUCT_NAME', 'Findance'))}}, user.provisioning_uri
   end
 
   test "ai_available? returns true when openai access token set in settings" do

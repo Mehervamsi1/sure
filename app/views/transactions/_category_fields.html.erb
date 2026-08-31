@@ -14,8 +14,7 @@
     parent -> transaction.category_parent_id (virtual; kept so the choice survives
               a re-render after validation errors, and so the server can fall back
               to the parent when no child is picked)
-    child  -> transaction.category_id (the real column that gets persisted)
-%>
+    child  -> transaction.category_id (the real column that gets persisted) %>
 <% parents = categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.to_s.downcase } %>
 <% children_by_parent = categories.reject { |category| category.parent_id.nil? }.group_by(&:parent_id) %>
 <% selected_category = categories.find { |category| category.id == ef.object&.category_id } %>

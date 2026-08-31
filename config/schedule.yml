@@ -60,3 +60,9 @@ sweep_expired_goal_pledges:
   class: "SweepExpiredGoalPledgesJob"
   queue: "scheduled"
   description: "Marks goal pledges that passed their 7-day window as expired"
+
+sweep_expired_sessions:
+  cron: "15 * * * *" # every hour
+  class: "SessionSweepJob"
+  queue: "scheduled"
+  description: "Removes sessions past their idle or absolute expiry"

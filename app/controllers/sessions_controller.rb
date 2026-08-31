@@ -76,6 +76,14 @@ class SessionsController < ApplicationController
     end
   end
 
+  # Sign out every other device. The caller's own session is spared so the
+  # action does not sign them out of the device they are using to do it.
+  def revoke_all
+    Session.revoke_all_for(Current.user, except: Current.session)
+
+    redirect_to settings_security_path, notice: t(".revoked"), status: :see_other
+  end
+
   def destroy
     user = Current.user
     id_token = session[:id_token_hint]

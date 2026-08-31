@@ -31,6 +31,12 @@ generic_s3:
   bucket: <%= ENV["GENERIC_S3_BUCKET"] %>
   endpoint: <%= ENV["GENERIC_S3_ENDPOINT"] %>
   force_path_style: <%= ActiveModel::Type::Boolean.new.cast(ENV.fetch("GENERIC_S3_FORCE_PATH_STYLE", "false")) %>
+  # aws-sdk-s3 >= 1.178 sends CRC32 checksum headers by default. Supabase
+  # Storage, MinIO and other S3-compatible endpoints reject them, so uploads
+  # fail with a signature/checksum error rather than anything readable. The
+  # cloudflare service above carries the same two settings for the same reason.
+  request_checksum_calculation: "when_required"
+  response_checksum_validation: "when_required"
 
 google:
   service: GCS

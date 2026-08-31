@@ -10,5 +10,6 @@ class Settings::SecuritiesController < ApplicationController
     @webauthn_credentials = Current.user.webauthn_credentials.order(created_at: :asc)
     @encryption_unconfigured = Rails.application.config.app_mode.self_hosted? &&
       !ActiveRecordEncryptionConfig.explicitly_configured?
+    @active_sessions = Current.user.sessions.active.order(last_active_at: :desc)
   end
 end

@@ -264,7 +264,9 @@ Rails.application.routes.draw do
   resource :current_session, only: %i[update]
 
   resource :registration, only: %i[new create]
-  resources :sessions, only: %i[index new create destroy]
+  resources :sessions, only: %i[index new create destroy] do
+    delete :revoke_all, on: :collection
+  end
   get "/auth/mobile/:provider", to: "sessions#mobile_sso_start"
   match "/auth/:provider/callback", to: "sessions#openid_connect", via: %i[get post]
   match "/auth/failure", to: "sessions#failure", via: %i[get post]

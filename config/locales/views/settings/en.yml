@@ -238,6 +238,14 @@ en:
         sso_no_email: No email
         sso_no_identities: No SSO accounts connected
         sso_connect_hint: Log out and sign in with an SSO provider to connect an account.
+        sessions_title: Active sessions
+        sessions_subtitle: Devices currently signed in to your account. Sessions end after 30 minutes of inactivity, and after 7 days regardless.
+        this_device: this device
+        unknown_device: Unknown device
+        unknown_ip: Unknown location
+        last_active: "active %{time} ago"
+        revoke: Sign out
+        revoke_all: Sign out everywhere else
         sso_confirm_title: Disconnect Account?
         sso_confirm_body: Are you sure you want to disconnect your %{provider} account? You can reconnect it later by signing in with that provider again.
         sso_confirm_button: Disconnect
