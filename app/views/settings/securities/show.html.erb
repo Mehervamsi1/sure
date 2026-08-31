@@ -187,3 +187,37 @@
     <% end %>
   <% end %>
 <% end %>
+
+<%# Active sessions: sessions used to be immortal, so a signed-in device stayed
+    signed in forever. This surfaces every live session and allows revoking. %>
+<%= settings_section title: t(".sessions_title"), subtitle: t(".sessions_subtitle") do %>
+  <div class="divide-y divide-alpha-black-100">
+    <% @active_sessions.each do |session| %>
+      <div class="flex items-start justify-between gap-3 py-3">
+        <div class="min-w-0">
+          <p class="text-sm text-primary truncate">
+            <%= session.user_agent.presence || t(".unknown_device") %>
+            <% if session.id == Current.session&.id %>
+              <span class="text-xs text-secondary">(<%= t(".this_device") %>)</span>
+            <% end %>
+          </p>
+          <p class="text-xs text-secondary">
+            <%= session.ip_address.presence || t(".unknown_ip") %> ·
+            <%= t(".last_active", time: time_ago_in_words(session.last_active_at || session.created_at)) %>
+          </p>
+        </div>
+        <% unless session.id == Current.session&.id %>
+          <%= button_to t(".revoke"), session_path(session), method: :delete,
+                        class: "btn btn--outline text-sm shrink-0" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @active_sessions.count > 1 %>
+    <div class="mt-4">
+      <%= button_to t(".revoke_all"), revoke_all_sessions_path, method: :delete,
+                    class: "btn btn--outline" %>
+    </div>
+  <% end %>
+<% end %>

@@ -61,9 +61,9 @@ class SessionLifecycleTest < ActionDispatch::IntegrationTest
     cookie = response.cookies["session_token"]
     assert_not_nil cookie, "login must set the session cookie"
 
-    session_cookie_header = Array(response.headers["Set-Cookie"]).flat_map { |h| h.to_s.split("
-") }
-                                 .find { |h| h.start_with?("session_token=") }
+    session_cookie_header = Array(response.headers["Set-Cookie"])
+      .flat_map { |header| header.to_s.split("\n") }
+      .find { |header| header.start_with?("session_token=") }
     assert_not_nil session_cookie_header, "session_token must be set with explicit attributes"
     assert_match(/httponly/i, session_cookie_header)
     assert_match(/samesite=lax/i, session_cookie_header)
