@@ -1,4 +1,4 @@
-class AddExpiryToSessions < ActiveRecord::Migration[7.2]
+class AddExpiryToSessions < ActiveRecord::Migration[8.1]
   def up
     add_column :sessions, :last_active_at, :datetime
     add_column :sessions, :expires_at, :datetime
