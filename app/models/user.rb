@@ -495,8 +495,13 @@ class User < ApplicationRecord
       AccountShare.where(account_id: account_ids, user_id: new_owner.id).delete_all
     end
 
+    # The purge runs asynchronously, so this row exists for a short window after
+    # someone asks to be deleted. It must not carry their address through that
+    # window: the previous form kept the entire original address and only moved
+    # the "@", so the identity was still fully readable. A random token frees
+    # the unique index without retaining anything about the person.
     def deactivated_email
-      email.gsub(/@/, "-deactivated-#{SecureRandom.uuid}@")
+      "deactivated-#{SecureRandom.uuid}@deleted.invalid"
     end
 
     def profile_image_size
