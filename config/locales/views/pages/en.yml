@@ -33,9 +33,11 @@ en:
       title: Privacy Policy
       heading: Privacy Policy
       placeholder: Privacy policy content will be displayed here.
+      version: "Version %{version} — in effect since %{date}"
     terms:
       title: Terms of Service
       heading: Terms of Service
+      version: "Version %{version} — in effect since %{date}"
       placeholder: Terms of service content will be displayed here.
     dashboard:
       welcome: "Welcome back, %{name}"

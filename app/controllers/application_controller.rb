@@ -2,8 +2,12 @@ class ApplicationController < ActionController::Base
   include RestoreLayoutPreferences, Onboardable, Localize, AutoSync, Authentication, Invitable,
           SelfHostable, StoreLocation, Impersonatable, Breadcrumbable,
           FeatureGuardable, Notifiable, SafePagination, AccountAuthorizable,
-          PreviewGateable
+          PreviewGateable, LegalAcceptable
   include Pundit::Authorization
+
+  # Declared here rather than inside LegalAcceptable so it is unambiguously
+  # ordered after Authentication has populated Current.user.
+  before_action :require_legal_acceptance!
 
   include Pagy::Backend
 

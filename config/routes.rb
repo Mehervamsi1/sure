@@ -793,6 +793,11 @@ Rails.application.routes.draw do
   get "terms", to: terms_url ? redirect(terms_url) : "pages#terms"
   get "intro", to: "pages#intro"
 
+  # Versioned terms/privacy acceptance. Kept outside the /privacy and /terms
+  # reading routes so the gate can never trap someone on the page that explains
+  # what they are being asked to accept.
+  resource :legal_acceptance, only: %i[show create], path: "legal/accept"
+
   # Admin namespace for super admin functionality
   namespace :admin do
     resources :sso_providers do
