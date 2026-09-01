@@ -4,7 +4,7 @@ A working mental model of what Findance is, how a request flows through it, how 
 maths actually works, and how it is deployed and operated. Read top to bottom once; after
 that use it as a map.
 
-*Last updated: 2026-07-27.*
+*Last updated: 2026-09-01.*
 
 ---
 
@@ -28,12 +28,13 @@ Scale of the thing you are working with:
 
 | | |
 |---|---|
-| Database tables | 119 |
-| Models | 142 |
-| Controllers | 178 |
-| Background jobs | 42 |
-| Migrations | 386 |
-| Test files | 566 |
+| Database tables | 120 |
+| Models | 144 |
+| Controllers | 180 |
+| Background jobs | 43 |
+| Migrations | 388 |
+| Test files | 571 |
+| Tests passing | 5,667 |
 
 This is a large mature application. You are not maintaining a small app; you are maintaining
 a **small delta on top of a large app**. Almost every "how do I…" question is answered by
@@ -60,26 +61,34 @@ replacing DOM nodes. (That is exactly what broke statement uploads; see §11.)
 ## 3. Runtime topology — where the code physically runs
 
 ```
-                        ┌─────────────────────────┐
-   you ──── HTTPS ────► │ Cloudflare (findance.app)│  proxied, TLS, DNS
-                        └────────────┬─────────────┘
-                                     │
-                        ┌────────────▼─────────────┐
-                        │  Railway — US East (VA)   │
-                        │  ┌─────────┐ ┌──────────┐ │
-                        │  │  web    │ │  worker  │ │  same image, different CMD
-                        │  │ (Puma)  │ │ (Sidekiq)│ │
-                        │  └────┬────┘ └────┬─────┘ │
-                        └───────┼───────────┼───────┘
-                                │           │
-              ┌─────────────────┘           └──────────────┐
-              ▼                                            ▼
-   ┌──────────────────────┐                    ┌────────────────────────┐
-   │ Supabase Postgres    │                    │ Redis Cloud            │
-   │ Montreal ca-central-1│                    │ ca-central-1           │
-   │ (session pooler:5432)│                    │ queue + cache + cable  │
-   └──────────────────────┘                    └────────────────────────┘
+                          ┌──────────────────────────┐
+     you ──── HTTPS ────► │ Cloudflare (findance.app)│   proxied, TLS, DNS
+                          └─────────────┬────────────┘
+                                        │
+                          ┌─────────────▼────────────┐
+                          │   Railway — US East (VA) │
+                          │  ┌─────────┐ ┌─────────┐ │  same image,
+                          │  │   web   │ │ worker  │ │  different CMD
+                          │  │ (Puma)  │ │(Sidekiq)│ │
+                          │  └────┬────┘ └────┬────┘ │
+                          └───────┼───────────┼──────┘
+                                  │           │
+              ┌───────────────────┴─────┬─────┴──────────────┐
+              ▼                         ▼                    ▼
+   ┌────────────────────┐   ┌────────────────────┐  ┌──────────────────┐
+   │ Supabase Postgres  │   │ Supabase Storage   │  │ Redis Cloud      │
+   │ pooler :5432       │   │ S3: findance-      │  │ queue + cache    │
+   │                    │   │     uploads        │  │ + ActionCable    │
+   └────────────────────┘   └────────────────────┘  └──────────────────┘
+        all three in ca-central-1 (Montreal)
 ```
+
+**Uploads live in object storage, not on the container.** Active Storage used to default to
+`local`, meaning files were written to the container's own disk — so every deploy destroyed
+them, and the worker (a *different* container) could not read them at all. Nine files were
+lost that way before this was found. Storage now points at Supabase's S3-compatible endpoint,
+with a **separate bucket per environment** (`findance-uploads`, `findance-uploads-staging`) so
+staging can never write into — or purge from — production's files.
 
 Two services run **the same Docker image**; the only difference is the start command
 (`rails server` vs `bundle exec sidekiq`, via `Dockerfile` and `Dockerfile.worker`).
@@ -98,23 +107,36 @@ transaction pooler (6543) — Rails uses prepared statements, which transaction 
 ## 4. Environments and how code reaches production
 
 ```
-  your machine                GitHub                     Railway
-  ────────────                ──────                     ───────
-  B:\Projects\findance ──push──► findance/setup ──auto──► production  → findance.app
-    (worktree)                                            Supabase + Redis Cloud
-
-  B:\Projects\findance-staging ─► findance/staging ─────► staging     → web-staging-48fd…
-                                                          own Postgres + Redis (internal)
+  your machine              GitHub                        Railway
+  ────────────              ──────                        ───────
+  B:\Projects\findance ──► findance/setup ──auto──┬──► production → findance.app
+    (worktree)                                    │      Supabase + Redis Cloud + Storage
+                                                  │
+                                                  └──► staging    → web-staging-48fd…
+                                                         own Postgres + Redis (internal)
+                                                         own Storage bucket
 ```
+
+Both environments track the **same branch**. Only their data and their environment variables
+differ — which is the whole reason configuration can be staged but code cannot.
 
 - Pushing to a branch **auto-deploys** it (Railway GitHub App). No manual step.
 - **Migrations run automatically on boot** via `bin/docker-entrypoint` (`rails db:prepare`).
   A migration merged to `findance/setup` *will* run against production Supabase. Back up first.
-- Staging is fully isolated: its own Postgres and Redis inside Railway, so experiments can
-  never touch real data.
-- **Caveat:** Railway stores repo+branch at the *service* level, shared across environments.
-  Pointing one environment at a branch has moved the other before. Verify with
-  `railway status` after changing sources.
+- Staging's **data** is fully isolated: its own Postgres, Redis and storage bucket, so an
+  experiment there can never read, write or purge anything real.
+- **There is no independent staging gate for code.** Railway stores repo+branch at the
+  *service* level, shared across environments. This was tested directly rather than assumed: a
+  probe branch identical to production's HEAD was pointed at staging only, and **production
+  followed within seconds**. So a push reaches both environments at once, and a migration
+  merged to `findance/setup` runs against production Supabase at the same moment it runs
+  against staging's.
+  - **Environment variables *are* per-environment.** Configuration can therefore genuinely be
+    staged first (that is how object storage was rolled out); code cannot.
+  - Getting a real code gate needs a second service pair, or a per-environment branch setting
+    if the Railway dashboard exposes one.
+- The practical gate today is the Codespace: the full suite, rubocop, erb_lint and brakeman
+  against a real Postgres, before anything is pushed.
 
 ---
 
@@ -124,12 +146,16 @@ transaction pooler (6543) — Rails uses prepared statements, which transaction 
 
 ```
 Family ──┬── User (super_admin | admin | member | guest)
+         │      └── Session          (expiring, revocable)
+         │      └── LegalAcceptance  (which document version, accepted when)
          ├── Account
          ├── Category
          ├── Budget
          ├── Tag
          ├── ExpenseContainer
          └── provider items (Plaid, SimpleFIN, …)
+
+LegalDocument sits outside the tenancy tree — it is instance-wide, not per family.
 ```
 
 **`Family` is the tenant.** Almost every query starts from `Current.family`. If you write a
@@ -248,6 +274,39 @@ EODHD and others are available). Gold is **not** modelled yet — that is Phase 
 
 ---
 
+### 5.9 Sessions and legal acceptance
+
+Two small models that gate access to everything else.
+
+**`Session`** is a real database row, not just a cookie. It carries `user_agent`, `ip_address`,
+`last_active_at` and `expires_at`, and expires on **two independent axes**: 30 minutes idle, and
+7 days absolute regardless of activity (both ENV-tunable). Three details matter:
+
+- `last_active_at` is written on nearly every request, so it is **throttled to once a minute**
+  via `update_column`. Without that, every page view costs an extra write to a database in
+  another city.
+- Requests the *browser* makes on its own — `/cable`, `/manifest`, `/service-worker`,
+  sparkline frames — deliberately do **not** count as activity. Otherwise an open tab with
+  nobody at the keyboard keeps a session alive forever, which defeats the idle timeout.
+- Logging in calls `reset_session`, preserving only a small whitelist of keys. That closes
+  session fixation: a session id fixed before login cannot be reused after it.
+
+Users can see every live session in Settings → Security and revoke them individually or all at
+once; an hourly `SessionSweepJob` removes expired rows.
+
+**`LegalDocument` / `LegalAcceptance`** record *which version* of terms and privacy a person
+agreed to, and when. `LegalDocument.current(kind)` returns the newest document whose
+`effective_at` has passed, so a new version can be staged in advance without prompting anyone
+until it takes effect. Acceptance is recorded per user per document version, so when a new
+version becomes effective **existing users are re-prompted**, not just new signups. Re-accepting
+is idempotent — it keeps the original timestamp, because the date someone agreed must not move.
+
+The gate is dormant while no document is published, which is how it ships ahead of the legal
+text. The acceptance screen, `/privacy` and `/terms`, and signing out are never blocked by it —
+otherwise a user could be trapped on a page explaining something they cannot read.
+
+---
+
 ## 6. The sync engine — why things happen "later"
 
 Almost every write enqueues a **`Sync`**. A sync is a tracked, resumable unit of work:
@@ -334,24 +393,76 @@ system fonts.
 
 ## 9. Security model
 
-| Layer | Mechanism |
-|---|---|
-| Sessions | Signed cookie (`_sure_session`), `Current.session` |
-| Passwords | bcrypt |
-| Second factor | TOTP (`ROTP`), issuer = `PRODUCT_NAME` |
-| Roles | `super_admin` > `admin` > `member` > `guest` |
-| Per-account sharing | `AccountShare` → `owner` / `full_control` / `read_write` / `read_only` |
-| API | Doorkeeper OAuth + scoped API keys |
-| Abuse | Rack::Attack throttles |
-| Secrets at rest | ActiveRecord encryption on provider tokens |
-| Secrets in transit | HTTPS only (`.app` is HSTS-preloaded — plain HTTP cannot work) |
-| Log hygiene | `filter_parameters` for params **and** `http_header_filters` for headers |
+| Layer | Mechanism | State |
+|---|---|---|
+| Sessions | DB-backed, 30 min idle / 7 day absolute, explicit cookie flags, rotation on login | ✅ |
+| Passwords | bcrypt | ✅ |
+| Second factor | TOTP (`ROTP`), issuer = `PRODUCT_NAME` | ✅ available, **not enforced** |
+| Roles | `super_admin` > `admin` > `member` > `guest` | ✅ |
+| Per-account sharing | `AccountShare` → `owner` / `full_control` / `read_write` / `read_only` | ✅ intra-family only |
+| API | Doorkeeper OAuth + API keys (`read` or `read_write`, one per key) | ✅ |
+| Abuse | Rack::Attack throttles | ✅ default limits, not tightened |
+| Secrets in transit | HTTPS only (`.app` is HSTS-preloaded — plain HTTP cannot work) | ✅ |
+| Log hygiene | `filter_parameters` for params **and** `http_header_filters` for headers | ✅ |
+| Uploads | Supabase Storage, private buckets, signed URLs | ✅ |
+| **Secrets at rest** | **nothing is encrypted — see below** | ❌ |
 
-**Known open items (Phase 3):** `ACTIVE_RECORD_ENCRYPTION_*` keys are derived from
-`SECRET_KEY_BASE` rather than set explicitly — meaning `SECRET_KEY_BASE` cannot be rotated
-without orphaning encrypted data. Credentials shared during setup have not been rotated.
-Statement files sit on the container's **ephemeral disk**, so they are lost on redeploy and
-unreadable by the worker.
+### 9.1 Encryption at rest is NOT on. Read this before trusting the schema.
+
+The models are full of `encrypts` declarations, and it is natural to conclude that provider
+tokens, API keys, MFA secrets and emails are protected. **They are not.** Every one of those
+columns is stored as readable plaintext in production today.
+
+The reason is a single conditional. `Encryptable.encryption_ready?` resolves to
+`ActiveRecordEncryptionConfig.explicitly_configured?`, which counts **only** environment
+variables or Rails credentials — it does *not* count the self-hosted runtime fallback that
+derives keys from `SECRET_KEY_BASE`. So the fallback was assigning keys while no model ever
+declared `encrypts`:
+
+```ruby
+if encryption_ready?          # false in production → the whole block is skipped
+  encrypts :email, deterministic: true
+  encrypts :otp_secret, deterministic: true
+end
+```
+
+Verified directly, not inferred: `select email from users limit 3` returns
+`partner_user@example.com` — readable, not ciphertext. The boot-time warning about data being
+"UNENCRYPTED at rest" was telling the literal truth all along.
+
+**Turning it on is a migration, not a config change.** Setting the three key variables flips
+`encrypts` on, and Rails immediately starts looking up users by *ciphertext* against columns
+holding *plaintext*. Nothing matches, `find_by(email:)` returns nil, and every user is locked
+out. This was learned the hard way: pinning the keys took production login down for ~25 minutes
+before being rolled back.
+
+The correct sequence:
+
+1. `config.active_record.encryption.support_unencrypted_data = true` — lets Rails read the
+   existing plaintext while the migration runs. **This step is mandatory and was the one missed.**
+2. Set the three `ACTIVE_RECORD_ENCRYPTION_*` variables.
+3. Encrypt every existing row (`rails encryption:reencrypt`-style pass over ~20 models).
+4. Verify no plaintext remains, then set `support_unencrypted_data = false`.
+
+The dangerous columns are the **deterministic** ones, because they are used for lookups:
+`users.email`, `users.otp_secret`, `users.unconfirmed_email`, `ApiKey.display_key`, and every
+provider credential (Akahu, Binance, Brex, Coinbase, Coinstats, EnableBanking, Snaptrade,
+Sophtron, Up, Wise). A half-migrated table means the users in the un-migrated half cannot sign
+in. `rails encryption:attributes` prints the full list — but only when run **with keys
+exported**, since without them the models declare nothing and the task reports almost nothing.
+
+Key rotation, once encryption is actually on, needs `previous:` keys **and**
+`extend_queries = true`, or deterministic lookups stop matching rows still encrypted under the
+old key. That support is already wired, gated on `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*`.
+
+### 9.2 Other open items
+
+- **Credentials have never been rotated** — the Supabase database password, Redis URL, Sidekiq
+  dashboard password and Supabase S3 keys were all shared in plain text during setup.
+- **MFA is not enforced**, including for `super_admin`.
+- **Registration is open** (`ONBOARDING_STATE=open`): anyone with the URL can create an account.
+  Deliberate for now — friends are testing — but it is a decision, not a default.
+- **No terms or privacy text exists yet**, so the acceptance gate is dormant.
 
 ---
 
@@ -367,6 +478,11 @@ unreadable by the worker.
 | `APP_DOMAIN` | Used to build links in emails and jobs — set on **web *and* worker** |
 | `PRODUCT_NAME` | Product name everywhere, including the 2FA entry in authenticator apps |
 | `ONBOARDING_STATE` | `open` = anyone can register; `invite_only` closes it |
+| `ACTIVE_STORAGE_SERVICE` | `generic_s3` in both environments; `local` means the ephemeral disk |
+| `GENERIC_S3_*` | Supabase Storage endpoint, region, bucket, path-style. **Bucket differs per environment** |
+| `SESSION_IDLE_TIMEOUT_MINUTES` | default 30 |
+| `SESSION_ABSOLUTE_LIFETIME_DAYS` | default 7 |
+| `ACTIVE_RECORD_ENCRYPTION_*` | **Do not set these until the §9.1 migration is done** — setting them alone locks every user out |
 
 Connection budget is finite (managed Redis caps clients): Sidekiq internal pool, Sidekiq
 capacity (= concurrency), Rails cache pool and ActionCable all hold connections, and a rolling
@@ -398,6 +514,21 @@ Each of these cost real debugging time. They are the map's "here be dragons".
    `0` in the same command or you pay for two replicas.
 9. **Log timestamps in Railway can read stale** while the lines are current. Read by sequence,
    not by date.
+10. **`include A, B, C` includes in REVERSE order.** A `before_action` registered from a concern
+    listed last therefore runs *first* — before `Authentication` has set `Current.user`. A gate
+    written that way sees a nil user and waves every request through while looking completely
+    normal in a browser. Register order-sensitive filters explicitly in `ApplicationController`,
+    not from inside a concern. Only the tests caught this one.
+11. **Verifying a deploy means proving the new build is live.** Polling for HTTP 200 proves
+    nothing: the *old* container answers 200 perfectly well while the new one is still starting.
+    A change was once declared "verified on staging" on exactly that evidence, and was in fact
+    broken. Assert the deployed commit — or a value only the new build returns — *before*
+    testing behaviour.
+12. **`encrypts` is conditional in this codebase.** Models only declare it when keys are
+    explicitly configured, so an instance without keys silently stores everything in plaintext,
+    and encryption tooling run without keys exported reports almost nothing. See §9.1.
+13. **Deleting a record with raw SQL bypasses Active Storage callbacks** and leaves orphaned
+    blob and attachment rows pointing at files that no longer exist. Purge through the model.
 
 ---
 
@@ -414,8 +545,20 @@ git push origin findance/staging     # staging
 # Promote staging → production
 git push origin findance/staging:findance/setup
 
-# Back up before any migration (pg_dump 17 client, from the Codespace)
-pg_dump -h $DB_HOST -U $POSTGRES_USER -d $POSTGRES_DB -Fc -f backup.dump
+# Back up before any migration. The server is PostgreSQL 17, and pg_dump refuses
+# to dump a newer server, so the v17 client must be installed in the Codespace:
+#   . /etc/os-release
+#   curl -sSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc #     https://www.postgresql.org/media/keys/ACCC4CF8.asc
+#   echo "deb [...] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" #     > /etc/apt/sources.list.d/pgdg.list && apt-get update -qq && apt-get install -y postgresql-client-17
+/usr/lib/postgresql/17/bin/pg_dump -h $DB_HOST -U $POSTGRES_USER -d $POSTGRES_DB -Fc -f backup.dump
+
+# Audit which uploads still have a readable file, and which service holds them
+bin/rails active_storage:audit
+
+# Emergency rollback of a bad configuration change (this restored login during
+# the encryption incident): delete the variables and redeploy, do not wait for a fix
+railway variables delete VAR_NAME --service web
+railway service redeploy --service web --yes
 
 # Roll back a bad deploy
 git revert <sha> && git push origin findance/setup
@@ -439,21 +582,42 @@ recreate with `gh codespace create -R Mehervamsi1/sure -b <branch> -m basicLinux
 | Brand | Token overlay, coin-edge logomark, Cormorant + Instrument Sans, full asset set in `brand/` |
 | Categories | Dependent parent → child selects on the transaction form |
 | Containers | New `ExpenseContainer` model, nav entry, container lens |
-| Security | Header redaction so session cookies stop leaking into logs |
+| Sessions | Idle + absolute expiry, cookie hardening, login rotation, active-session management, sweeper |
+| Storage | Uploads moved off the ephemeral disk to Supabase Storage, one bucket per environment |
+| Legal | `LegalDocument` + versioned `LegalAcceptance` with an acceptance gate (dormant until text is published) |
+| Security | Header redaction so session cookies stop leaking into logs; deletion tombstone no longer retains the address |
 | Reliability | Redis connection pools capped for managed-Redis client limits |
-| Infra | Supabase + Redis Cloud + Railway, staging pipeline, custom domain |
+| Infra | Supabase + Redis Cloud + Railway, custom domain, all components co-located in ca-central-1 |
 
 Everything else is upstream. **Prefer upstream's way of doing something over inventing a
 parallel one** — it keeps future merges cheap.
 
 ---
 
-## 14. Where this is going (Phase 3)
+## 14. Where this is going
 
-- Group budgeting: invite friends, split expenses, track who owes whom
-- Email notifications (signup, login, OTP) with user-controlled preferences
-- Public landing page
-- Gold (physical, by weight, at spot) and richer stock portfolios
-- Remaining security work: pin encryption keys, rotate credentials, harden auth, move
-  statement files to object storage
-- Legal: terms and conditions, privacy policy — required before real public signups
+Ordered by what blocks what, not by appetite.
+
+**Before inviting anyone beyond friends**
+
+1. **Encryption at rest** (§9.1) — the largest open exposure: provider tokens, API keys, MFA
+   secrets and PII are all readable in the database. Needs a rehearsed four-step migration and a
+   maintenance window, not a config change.
+2. **Rotate credentials** — database password, Redis URL, Sidekiq password, Supabase S3 keys.
+3. **Harden auth** — enforce MFA for admins, tighten Rack::Attack on login and the API, alert on
+   failed-login spikes.
+4. **Legal text** — the mechanism is live and dormant; publishing a `LegalDocument` activates it.
+
+**Then, product**
+
+5. **Portfolio** — the model layer already exists (`Security` → `SecurityPrice` → `Trade` →
+   `Holding`). Needs a licensed price provider, delayed-quote labelling, corporate actions,
+   market calendars, and local-vs-home-currency return shown separately.
+6. **Capture** — write-only scoped API keys plus iOS Shortcuts, using the existing
+   `(account_id, source, external_id)` unique index for idempotency; and **ShotCapture**, UPI
+   screenshot ingestion reusing the `PdfImport` pipeline.
+7. **Financial state classification** — daily feature vector, deterministic rules (not ML, because
+   the reasoning must be explainable and contestable), guidance whose numbers are computed rather
+   than generated.
+8. **Share** — split a payment across people, track claims and settlements without ever writing
+   into another family's ledger. Touches the tenancy model, so it goes last.
