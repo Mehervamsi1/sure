@@ -5,6 +5,10 @@ class ApplicationController < ActionController::Base
           PreviewGateable, LegalAcceptable
   include Pundit::Authorization
 
+  # Declared here rather than inside LegalAcceptable so it is unambiguously
+  # ordered after Authentication has populated Current.user.
+  before_action :require_legal_acceptance!
+
   include Pagy::Backend
 
   # Pundit uses current_user by default, but this app uses Current.user

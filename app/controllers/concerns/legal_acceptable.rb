@@ -4,9 +4,10 @@
 module LegalAcceptable
   extend ActiveSupport::Concern
 
-  included do
-    before_action :require_legal_acceptance!
-  end
+  # NOTE: the before_action is declared explicitly in ApplicationController, not
+  # here. `include A, B` includes in reverse order, so a callback registered from
+  # this concern ran *before* Authentication set Current.user - the gate saw a nil
+  # user and waved every request through.
 
   class_methods do
     def skip_legal_acceptance(**options)
