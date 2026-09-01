@@ -45,7 +45,10 @@ namespace :encryption do
       next if attributes.empty?
 
       deterministic = attributes.select do |attribute|
-        model.type_for_attribute(attribute).try(:scheme).try(:deterministic?)
+        type = model.type_for_attribute(attribute)
+        type.respond_to?(:scheme) && type.scheme.respond_to?(:deterministic?) && type.scheme.deterministic?
+      rescue StandardError
+        false
       end
 
       puts "#{model.name}: #{attributes.join(', ')}"
