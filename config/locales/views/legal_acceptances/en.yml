@@ -1,0 +1,17 @@
+---
+en:
+  legal_documents:
+    kinds:
+      terms: Terms of Service
+      privacy: Privacy Policy
+  legal_acceptances:
+    show:
+      title: Before you continue
+      subtitle: Please review and accept these to keep using %{product_name}.
+      version: "Version %{version}"
+      confirm: I have read and agree to these documents.
+      submit: Accept and continue
+      sign_out: Sign out instead
+    create:
+      accepted: Thanks — you're all set.
+      must_accept: You need to accept these before continuing.

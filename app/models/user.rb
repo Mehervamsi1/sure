@@ -23,6 +23,8 @@ class User < ApplicationRecord
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
   belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
+  has_many :legal_acceptances, dependent: :destroy
+  has_many :accepted_legal_documents, through: :legal_acceptances, source: :legal_document
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
@@ -389,6 +391,21 @@ class User < ApplicationRecord
 
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
+  end
+
+  # Documents in force that this user has not accepted yet. Non-empty means they
+  # are blocked from using the app until they accept — including existing users
+  # when a new version takes effect, not just people signing up.
+  def outstanding_legal_documents(locale: "en")
+    required = LegalDocument.current_required(locale: locale)
+    return [] if required.empty?
+
+    accepted_ids = legal_acceptances.where(legal_document_id: required.map(&:id)).pluck(:legal_document_id)
+    required.reject { |document| accepted_ids.include?(document.id) }
+  end
+
+  def legal_acceptance_outstanding?(locale: "en")
+    outstanding_legal_documents(locale: locale).any?
   end
 
   def preview_features_enabled?

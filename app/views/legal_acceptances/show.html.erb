@@ -1,0 +1,37 @@
+<% content_for :title, t(".title") %>
+
+<div class="flex items-center justify-center min-h-full p-4 sm:p-6 lg:p-8">
+  <div class="w-full max-w-2xl space-y-4">
+    <div class="text-center space-y-1">
+      <h1 class="text-xl sm:text-2xl font-bold text-primary"><%= t(".title") %></h1>
+      <p class="text-sm text-secondary"><%= t(".subtitle", product_name: product_name) %></p>
+    </div>
+
+    <% @documents.each do |document| %>
+      <div class="bg-container border border-primary rounded-xl p-5 space-y-2">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 class="text-base font-medium text-primary"><%= document.title %></h2>
+          <span class="text-xs text-secondary"><%= t(".version", version: document.version) %></span>
+        </div>
+        <% if document.summary_of_changes.present? %>
+          <p class="text-sm text-secondary"><%= document.summary_of_changes %></p>
+        <% end %>
+        <div class="max-h-64 overflow-y-auto text-sm text-primary prose prose-sm">
+          <%= simple_format(document.body) %>
+        </div>
+      </div>
+    <% end %>
+
+    <%= form_with url: legal_acceptance_path, method: :post, class: "space-y-3" do |f| %>
+      <label class="flex items-start gap-2 text-sm text-primary">
+        <%= check_box_tag :accept, "1", false, class: "form-field__checkbox mt-0.5", required: true %>
+        <span><%= t(".confirm", product_name: product_name) %></span>
+      </label>
+      <%= f.submit t(".submit"), class: "btn btn--primary w-full" %>
+    <% end %>
+
+    <p class="text-center text-xs text-secondary">
+      <%= link_to t(".sign_out"), session_path(Current.session), data: { turbo_method: :delete }, class: "hover:underline" %>
+    </p>
+  </div>
+</div>

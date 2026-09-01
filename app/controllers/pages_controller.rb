@@ -90,11 +90,15 @@ class PagesController < ApplicationController
     render layout: "blank"
   end
 
+  # Renders the version currently in force. Falls back to the placeholder view
+  # when no document has been published yet, so the route never 500s.
   def privacy
+    @document = LegalDocument.current("privacy", locale: I18n.locale.to_s)
     render layout: "blank"
   end
 
   def terms
+    @document = LegalDocument.current("terms", locale: I18n.locale.to_s)
     render layout: "blank"
   end
 
